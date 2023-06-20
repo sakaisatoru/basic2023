@@ -1,0 +1,19 @@
+移植性に留意した tiny basic インタープリタ
+
+中間コード形式
+エディタ内蔵
+
+変数 A-Z
+配列変数 @
+
+命令
+NEW RUN LIST FREE LOAD SAVE POKE POKEW CALL
+構文
+LET PRINT INPUT GOTO GOSUB RETURN IF FOR NEXT CONTINUE BREAK END
+
+演算子
++ - * / == != <= >= < > ! | ^ & ~ ++ -- || && ( ) << >> <<< >>>
+
+関数
+PEEK PEEKW ABS
+
