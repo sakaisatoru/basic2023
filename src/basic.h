@@ -63,6 +63,8 @@ B_RETURN,
 B_RUN,
 B_SAVE,
 B_STOP,
+B_THEN,
+B_TO,
 B_F_PEEKW,
 
 B_F_PEEK,
@@ -73,15 +75,17 @@ B_F_MONTH,  // 月
 B_F_DAY,    // 日
 B_F_HOUR,   // 時
 B_F_MIN,    // 分
-// 0xc0
+// 0xc2
 B_F_SECOND, // 秒
 B_F_ADC,    // A/D
 B_F_TEMP,   // 温度
 B_F_HUM,    // 湿度
 B_F_PRESS,  // 気圧
 
-//0xc5
+//0xc7
 B_NUM,      // 内部コード 数値
+B_HEXNUM,      // 内部コード 数値
+B_BINNUM,      // 内部コード 数値
 B_VAR,      // 内部コード 変数
 B_ARRAY,    // 内部コード　配列
 B_STR,      // 内部コード 文字列 "

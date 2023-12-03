@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include "basic.h"
 
-static uint8_t word[] = {
+ uint8_t basic_word[] = {
 0x80|'B','R','E','A','K',
 0x80|'C','A','L','L',
 0x80|'C','O','N','T','I','N','U','E',
@@ -30,12 +30,47 @@ static uint8_t word[] = {
 0x80|'R','U','N',
 0x80|'S','A','V','E',
 0x80|'S','T','O','P',
+0x80|'T','H','E','N',
+0x80|'T','O',
 0x80|'P','E','E','K','W',
 0x80|'P','E','E','K',
 0x80|'A','B','S',
 0x80|'T','I','M','E',
 0x80
 };
+
+ uint8_t operator_word[] = {
+0x80|'~',           // B_NEG = 0x81
+0x80|'!',           // B_NOT
+0x80|'+','+',       // B_INC
+0x80|'-','-',       // B_DEC
+0x80|'*',           // B_MUL
+0x80|'/',           // B_DIV
+0x80|'%',           // B_MOD
+0x80|'+',           // B_PLUS
+0x80|'-',           // B_MINUS
+0x80|'<','<',       // B_LSHIFT
+0x80|'>','>',       // B_RSHIFT
+0x80|'<','<','<',   // B_LSHIFT2
+0x80|'>','>','>',   // B_RSHIFT2
+0x80|'<','=',       // B_LE
+0x80|'>','=',       // B_GRE
+0x80|'<',           // B_LESS
+0x80|'>',           // B_GR
+0x80|'=','=',       // B_EQ
+0x80|'=',           // B_EQ2
+0x80|'!','=',       // B_NEQ
+0x80|'|',           // B_BINOR
+0x80|'^',           // B_XOR
+0x80|'&',           // B_BINAND
+0x80|'|','|',       // B_OR
+0x80|'&','&',       // B_AND
+0x80|'(',           // B_OPENPAR
+0x80|')',           // B_CLOSEPAR
+0x80|'\'',          // B_REMARK
+};
+
+
 
 #define SKPSPC  while(**text==' '||**text=='\t')++*text
 
@@ -59,13 +94,11 @@ void put_basic_word (uint8_t *s, void(*__putc)(uint8_t))
 /*
  * 中間コードから予約語を得る
  */
-uint8_t *code2word (uint8_t code)
+uint8_t *code2word (uint8_t code, uint8_t topcode, uint8_t *s)
 {
-    uint8_t *s;
-    if (code < 0xa0) return NULL;
+    if (code < topcode) return NULL;
 
-    code -= 0xa0;
-    s = word;
+    code -= topcode;
 
     while (code > 0) {
         s++;
@@ -88,6 +121,7 @@ int16_t get_number (uint8_t **text)
     if (**text == '0') {
         ++*text;
         switch (**text) {
+            case 'X':
             case 'x':
                 // １６進数
                 for (;;) {
@@ -106,6 +140,7 @@ int16_t get_number (uint8_t **text)
                 }
                 return n;
 
+            case 'B':
             case 'b':
                 // ２進数
                 for (;;) {
@@ -202,13 +237,14 @@ uint8_t token (uint8_t **text)
     SKPSPC;
 
     if (**text >= '0' && **text <= '9') {
-        n = B_NUM;
+        n = (*(*text+1) == 'X') ? B_HEXNUM :
+            (*(*text+1) == 'B') ? B_BINNUM : B_NUM;
     }
     else if (**text == '@') {
         n = B_ARRAY;
     }
     else if (**text >= 'A' && **text <= 'Z') {
-        uint8_t *table = word;
+        uint8_t *table = basic_word;
         uint8_t *subtext = *text;
         n = B_BREAK;    // 予約語内部コードの先頭
         while (*table != 0x80) {
