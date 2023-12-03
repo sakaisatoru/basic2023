@@ -80,9 +80,9 @@ uint8_t *code2word (uint8_t code)
     return s;
 }
 
-int8_t get_number (uint8_t **text)
+int16_t get_number (uint8_t **text)
 {
-    int8_t n;
+    int16_t n;
 
     n = 0;
     if (**text == '0') {
@@ -181,10 +181,13 @@ uint8_t operator (uint8_t **text)
         case '\"':
             n = B_STR;      break;
         case ',':
+            n = B_COMMA;    break;
         case ':':
+            n = B_COLON;    break;
         case ';':
+            n = B_SEMICOLON;break;
         case '\n':
-            n = B_DELIMITER;break;
+            n = B_EOL;      break;
         default:
             --*text;
             n = 0;
@@ -233,3 +236,5 @@ uint8_t token (uint8_t **text)
     }
     return n;
 }
+
+

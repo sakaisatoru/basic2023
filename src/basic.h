@@ -73,19 +73,22 @@ B_F_MONTH,  // 月
 B_F_DAY,    // 日
 B_F_HOUR,   // 時
 B_F_MIN,    // 分
-
+// 0xc0
 B_F_SECOND, // 秒
 B_F_ADC,    // A/D
 B_F_TEMP,   // 温度
 B_F_HUM,    // 湿度
 B_F_PRESS,  // 気圧
 
-
+//0xc5
 B_NUM,      // 内部コード 数値
 B_VAR,      // 内部コード 変数
 B_ARRAY,    // 内部コード　配列
 B_STR,      // 内部コード 文字列 "
-B_DELIMITER,  // 区切り子 , ; : eol
+B_COMMA,    // ,
+B_COLON,    // :
+B_SEMICOLON,// ;
+B_EOL,      // eol
 };
 
 
