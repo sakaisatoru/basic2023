@@ -7,7 +7,42 @@
 #include "basic.h"
 
  uint8_t basic_word[] = {
-0x80|'B','R','E','A','K',
+0x80|'~',           // B_NEG = 0x81
+0x80|'!',           // B_NOT
+0x80|'+','+',       // B_INC
+0x80|'-','-',       // B_DEC
+0x80|'*',           // B_MUL
+0x80|'/',           // B_DIV
+0x80|'%',           // B_MOD
+0x80|'+',           // B_PLUS
+0x80|'-',           // B_MINUS
+0x80|'<','<',       // B_LSHIFT
+0x80|'>','>',       // B_RSHIFT
+0x80|'<','<','<',   // B_LSHIFT2
+0x80|'>','>','>',   // B_RSHIFT2
+0x80|'<','=',       // B_LE
+0x80|'>','=',       // B_GRE
+
+0x80|'<',           // B_LESS = 0x90
+0x80|'>',           // B_GR
+0x80|'=','=',       // B_EQ
+0x80|'=',           // B_EQ2
+0x80|'!','=',       // B_NEQ
+0x80|'|',           // B_BINOR
+0x80|'^',           // B_XOR
+0x80|'&',           // B_BINAND
+0x80|'|','|',       // B_OR
+0x80|'&','&',       // B_AND
+0x80|'(',           // B_OPENPAR
+0x80|')',           // B_CLOSEPAR
+0x80|'\'',          // B_REMARK
+0x80|',',           // B_COMMA
+0x80|':',           // B_COLON
+0x80|';',           // B_SEMICOLON
+0x80|'@',           // B_ARRAY
+0x80|'\"',          // B_STR
+
+0x80|'B','R','E','A','K',   // 0xa0
 0x80|'C','A','L','L',
 0x80|'C','O','N','T','I','N','U','E',
 0x80|'C','O','N','T',
@@ -38,38 +73,6 @@
 0x80|'T','I','M','E',
 0x80
 };
-
- uint8_t operator_word[] = {
-0x80|'~',           // B_NEG = 0x81
-0x80|'!',           // B_NOT
-0x80|'+','+',       // B_INC
-0x80|'-','-',       // B_DEC
-0x80|'*',           // B_MUL
-0x80|'/',           // B_DIV
-0x80|'%',           // B_MOD
-0x80|'+',           // B_PLUS
-0x80|'-',           // B_MINUS
-0x80|'<','<',       // B_LSHIFT
-0x80|'>','>',       // B_RSHIFT
-0x80|'<','<','<',   // B_LSHIFT2
-0x80|'>','>','>',   // B_RSHIFT2
-0x80|'<','=',       // B_LE
-0x80|'>','=',       // B_GRE
-0x80|'<',           // B_LESS
-0x80|'>',           // B_GR
-0x80|'=','=',       // B_EQ
-0x80|'=',           // B_EQ2
-0x80|'!','=',       // B_NEQ
-0x80|'|',           // B_BINOR
-0x80|'^',           // B_XOR
-0x80|'&',           // B_BINAND
-0x80|'|','|',       // B_OR
-0x80|'&','&',       // B_AND
-0x80|'(',           // B_OPENPAR
-0x80|')',           // B_CLOSEPAR
-0x80|'\'',          // B_REMARK
-};
-
 
 
 #define SKPSPC  while(**text==' '||**text=='\t')++*text
@@ -169,67 +172,6 @@ int16_t get_number (uint8_t **text)
     return n;
 }
 
-uint8_t operator (uint8_t **text)
-{
-    uint8_t n;
-
-    SKPSPC;
-    switch ((n = **text, ++*text, n)) {
-        case '~':
-            n = B_NEG;  break;
-        case '!':
-            n = (**text == '=') ? (++*text,B_NEQ) : B_NOT;    break;
-        case '+':
-            n = (**text == '+') ? (++*text,B_INC) : B_PLUS;   break;
-        case '-':
-            n = (**text == '-') ? (++*text,B_DEC) : B_MINUS;  break;
-        case '*':
-            n = B_MUL;  break;
-        case '/':
-            n = B_DIV;  break;
-        case '%':
-            n = B_MOD;  break;
-        case '<':
-            n = (**text == '=') ? (++*text,B_LE) :
-                (**text == '<') ? ((*(*text+1) == '<') ?
-                    (++*text,++*text,B_LSHIFT2) : (++*text,B_LSHIFT)) :
-                    B_LESS; break;
-        case '>':
-            n = (**text == '=') ? (++*text,B_GRE) :
-                (**text == '>') ? ((*(*text+2) == '>') ?
-                    (++*text,++*text,B_RSHIFT2) : (++*text,B_RSHIFT)) :
-                    B_GR; break;
-        case '=':
-            n = (**text == '=') ? (++*text,B_EQ) : B_EQ2;   break;
-        case '|':
-            n = (**text == '|') ? (++*text,B_OR) : B_BINOR; break;
-        case '^':
-            n = B_XOR;  break;
-        case '&':
-            n = (**text == '&') ? (++*text,B_AND) : B_BINAND; break;
-        case '(':
-            n = B_OPENPAR;  break;
-        case ')':
-            n = B_CLOSEPAR; break;
-        case '\'':
-            n = B_REMARK;   break;
-        case '\"':
-            n = B_STR;      break;
-        case ',':
-            n = B_COMMA;    break;
-        case ':':
-            n = B_COLON;    break;
-        case ';':
-            n = B_SEMICOLON;break;
-        case '\n':
-            n = B_EOL;      break;
-        default:
-            --*text;
-            n = 0;
-            break;
-    }
-    return n;
-}
 
 uint8_t token (uint8_t **text)
 {
@@ -243,18 +185,31 @@ uint8_t token (uint8_t **text)
     else if (**text == '@') {
         n = B_ARRAY;
     }
-    else if (**text >= 'A' && **text <= 'Z') {
+    else if (**text == '\0' || **text == '\n') {
+        n = B_EOL;
+    }
+    else {
         uint8_t *table = basic_word;
         uint8_t *subtext = *text;
-        n = B_BREAK;    // 予約語内部コードの先頭
+        uint8_t p;
+        n = B_NEG;    // 予約語内部コードの先頭
         while (*table != 0x80) {
             if ((0x7f & *table) == **text) {
+                p = **text;
                 table++;    ++*text;
                 while (*table == **text) {
                     table++;    ++*text;
                 }
-                if (((0x80 & *table) == 0x80) && !(**text >= 'A' && **text <= 'Z')) {
-                    return n;
+                if ((0x80 & *table) == 0x80) {
+                    if ((p >= 'A' && p <= 'Z') && !(**text >= 'A' && **text <= 'Z')) {
+                        // 直前の文字(照合済)がアルファベットなら、記号を区切り文字とする
+                        return n;
+                    }
+                    else {
+                        if ((**text >= 'A' && **text <= 'Z')||(**text>='0' && **text <='9')){
+                            return n;
+                        }
+                    }
                 }
             }
             n++;
@@ -267,10 +222,136 @@ uint8_t token (uint8_t **text)
         subtext++;
         n = (!(*subtext >= 'A' && *subtext <= 'Z')) ? B_VAR : 0;
     }
-    else {
-        n = operator (text);
-    }
     return n;
 }
 
+/*
+ * 中間コード列からソースを表示する。EOLにあったら終わる。
+ * 正常終了で 0 を返す。
+ */
+int show_line (uint8_t **pos)
+{
+    int rv = 0;
+    uint8_t *s;
 
+    while (**pos != B_EOL){
+        switch (**pos) {
+            case B_HEXNUM:
+                ++*pos;
+                printf ("0X%X", *((uint16_t *)*pos));
+                ++*pos;
+                break;
+            case B_BINNUM:
+                ++*pos;
+                uint16_t b = *((uint16_t *)*pos);
+                printf ("0B");
+                for (int i=0; i<16; i++) {
+                    putchar ((b & 0x8000) ? '1':'0');
+                    b <<= 1;
+                }
+                ++*pos;
+                break;
+
+            case B_NUM:
+                ++*pos;
+                printf ("%d", *((uint16_t *)*pos));
+                ++*pos;
+                break;
+
+            case B_STR:
+                ++*pos;
+                __putch ('\"');
+                while (**pos != B_STR){
+                    putchar (**pos);
+                    ++*pos;
+                }
+                __putch ('\"');
+                break;
+
+            case B_REMARK:
+                ++*pos;
+                __putch ('\'');
+                while (**pos != B_EOL){
+                    putchar (**pos);
+                    ++*pos;
+                }
+                break;
+
+            case B_VAR:
+                ++*pos;
+                __putch (**pos);
+                break;
+
+            default:
+                s = code2word (**pos, B_NEG,   basic_word);
+                if (s != NULL) {
+                    if (**pos >= B_BREAK) __putch (' ');
+                    put_basic_word (s, __putch);
+                    if (**pos >= B_BREAK) __putch (' ');
+                    break;
+                }
+                rv = 1;
+                goto exit_this;
+        }
+        ++*pos;
+    }
+exit_this:
+    __putch ('\n');
+    return rv;
+}
+
+/*
+ * 文字列を中間コードに変換しバッファに返す
+ * 正常終了で 0 を返す。
+ * 1 : バッファオーバー
+ * 2 : 未定義語が出現した
+ */
+int str2mid (uint8_t **text, uint8_t *buff, int buffsize)
+{
+    int rv = 0;
+
+    uint8_t *pos = buff;
+    uint8_t n;
+    int16_t d;
+
+    while ((n = token (text)) != 0) {
+        *pos++ = n;
+        switch (n) {
+            case B_EOL:
+                goto exit_this;
+
+            case B_VAR:
+                *pos++ = **text;
+                ++*text;
+                break;
+
+            case B_NUM:
+            case B_HEXNUM:
+            case B_BINNUM:
+                d = get_number (text);
+                *((int16_t *)pos) = d;
+                pos++;
+                pos++;
+                break;
+
+            case B_STR:
+                do {
+                    *pos++ = **text;
+                    ++*text;
+                }while (**text != '\"');
+                *pos++ = B_STR;
+                ++*text;
+                break;
+
+            default:
+                break;
+        }
+        if (pos >= &buff[buffsize-1]) {
+            rv = 1;
+            break;
+        }
+    }
+    rv = 2;
+exit_this:
+    return rv;
+}
