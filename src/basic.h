@@ -98,4 +98,5 @@ B_EOL = 0xd0, // eol
 B_TOL,      // top of line
 };
 
-
+typedef struct __LineBuffer		LineBuffer;
+	

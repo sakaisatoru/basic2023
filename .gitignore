@@ -1,5 +1,7 @@
 # http://www.gnu.org/software/automake
 src/tinybasic
+config.h.in~
+config.h
 
 Makefile.in
 /ar-lib

@@ -4,8 +4,23 @@
 #include <ctype.h>
 #include "basic.h"
 
-uint8_t textarea[1024];
+struct __LineBuffer {
+		uint8_t textarea[1024];
+		uint8_t *pos;
+		int len;
+};
 
+struct __EditorBuffer {
+		uint8_t buffer[1024];
+		int len;
+};
+
+static LineBuffer lnbuf;
+
+LineBuffer * LineBuffer_new (void)
+{
+	return &lnbuf;
+}
 
 uint8_t *editor_search_line (uint16_t linenumber)
 {
