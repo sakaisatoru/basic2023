@@ -186,7 +186,7 @@ uint8_t token (uint8_t **text)
         n = B_ARRAY;
     }
     else if (**text == '\0' || **text == '\n') {
-        n = B_EOL;
+        n = B_EOT;
     }
     else {
         uint8_t *table = basic_word;
@@ -234,7 +234,7 @@ int show_line (uint8_t **pos)
     int rv = 0;
     uint8_t *s;
 
-    while (**pos != B_EOL){
+    while (**pos != B_EOT){
         switch (**pos) {
             case B_HEXNUM:
                 ++*pos;
@@ -271,7 +271,7 @@ int show_line (uint8_t **pos)
             case B_REMARK:
                 ++*pos;
                 __putch ('\'');
-                while (**pos != B_EOL){
+                while (**pos != B_EOT){
                     putchar (**pos);
                     ++*pos;
                 }
@@ -317,7 +317,7 @@ int str2mid (uint8_t **text, uint8_t *buff, int buffsize)
     while ((n = token (text)) != 0) {
         *pos++ = n;
         switch (n) {
-            case B_EOL:
+            case B_EOT:
                 goto exit_this;
 
             case B_VAR:

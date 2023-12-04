@@ -51,7 +51,7 @@ int main (int ac, char *av[])
 
         //~ putchar ('\n');
         //~ pos = textbuff;
-        //~ while (*pos != B_EOL) {
+        //~ while (*pos != B_EOT) {
             //~ printf ("%02X ", *pos++);
         //~ }
         //~ putchar ('\n');
