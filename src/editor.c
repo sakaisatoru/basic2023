@@ -11,7 +11,23 @@
     B_TOL 行番号:uint16_t 行長さ:uint8_t 中間コード列
     B_TOL 行番号:uint16_t 行長さ:uint8_t 中間コード列
     B_EOT
+    
+	行削除
+	B_TOL word byte ...     B_TOL			B_EOT
+	^						^
+	dest					source			転送量 (int)(B_EOT - B_TOL(source)+1)
+	
+	行挿入
+	挿入内容
+	B_NUM word 中間コード列       長さは 字句変換側で求めておく (len)
 
+	B_TOL word byte ...     			B_EOT
+	^						^
+	source					dest(source+len)  転送量 (int)(B_EOT - dest)+1)
+	
+	
+	 
+		
 */
 
 
@@ -39,11 +55,45 @@ LineBuffer *LineBuffer_new (void)
     return &lnbuf;
 }
 
+uint8_t *LineBuffer_get_midbuffer (LineBuffer *ln)
+{
+	return ln->wordbuff;
+}
+
 EditorBuffer *EditorBuffer_new (void)
 {
     return &editerbuf;
 }
 
+/*
+ * １行分の入力を受付け、中間コードに変換する
+ */
+int LineBuffer_console (LineBuffer *ln)
+{
+	uint8_t *text;
+	int rv;
+	
+	fgets (ln->inputbuffer, sizeof(ln->inputbuffer)-1, stdin);
+    ln->pos = strchr (ln->inputbuffer, '\n');
+    if (ln->pos != NULL) *(ln->pos) = '\0';
+    else ln->inputbuffer[sizeof(ln->inputbuffer)-1] = '\0';
+    
+	//~ printf ("debuf : %s\n",linebuff);
+	text = ln->inputbuffer;
+	if (rv = str2mid (&text, ln->wordbuff, sizeof(ln->wordbuff))) {
+		// error
+		if (rv == 1) {
+			printf ("buffer overflow.");
+		}
+		else {
+			printf ("undefined word.");
+		}
+	}
+	return rv;
+}
+
+
+#if 0
 /*
  * 指定行を探す
  *
@@ -112,3 +162,4 @@ int editor_insert_and_replace (EditorBuffer *ed, LineBuffer *ln)
     }
     return rv;
 }
+#endif

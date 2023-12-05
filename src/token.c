@@ -302,9 +302,9 @@ exit_this:
 
 /*
  * 文字列を中間コードに変換しバッファに返す
- * 正常終了で 0 を返す。
- * 1 : バッファオーバー
- * 2 : 未定義語が出現した
+ * 得られた中間コード列の長さを返す
+ * -1 : バッファオーバー
+ * -2 : 未定義語が出現した
  */
 int str2mid (uint8_t **text, uint8_t *buff, int buffsize)
 {
@@ -313,11 +313,12 @@ int str2mid (uint8_t **text, uint8_t *buff, int buffsize)
     uint8_t *pos = buff;
     uint8_t n;
     int16_t d;
-
+	
     while ((n = token (text)) != 0) {
         *pos++ = n;
         switch (n) {
             case B_EOT:
+				rv = (int)(pos - buff);
                 goto exit_this;
 
             case B_VAR:
@@ -347,11 +348,11 @@ int str2mid (uint8_t **text, uint8_t *buff, int buffsize)
                 break;
         }
         if (pos >= &buff[buffsize-1]) {
-            rv = 1;
+            rv = -1;
             break;
         }
     }
-    rv = 2;
+    rv = -2;
 exit_this:
     return rv;
 }
