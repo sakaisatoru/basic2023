@@ -82,10 +82,10 @@ int LineBuffer_console (LineBuffer *ln)
 	text = ln->inputbuffer;
 	if (rv = str2mid (&text, ln->wordbuff, sizeof(ln->wordbuff))) {
 		// error
-		if (rv == 1) {
+		if (rv == -1) {
 			printf ("buffer overflow.");
 		}
-		else {
+		else if (rv==-2){
 			printf ("undefined word.");
 		}
 	}

@@ -31,15 +31,15 @@ int main (int ac, char *av[])
     int rv;
 	LineBuffer *ln;
 	
-    if (ac < 2) {
-        puts ("usage:\nbasic text");
-        return 0;
-    }
+    //~ if (ac < 2) {
+        //~ puts ("usage:\nbasic text");
+        //~ return 0;
+    //~ }
     
 	ln = LineBuffer_new ();
     for (;;) {
 		rv = LineBuffer_console (ln);
-
+		printf ("中間コードの長さ %d\n", rv);
         //~ putchar ('\n');
         //~ pos = textbuff;
         //~ while (*pos != B_EOT) {
