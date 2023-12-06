@@ -99,3 +99,5 @@ B_TOL,          // top of line
 
 typedef struct __LineBuffer     LineBuffer;
 typedef struct __EditorBuffer   EditorBuffer;
+
+int basic (EditorBuffer *ed, uint8_t *t);

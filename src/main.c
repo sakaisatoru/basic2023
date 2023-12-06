@@ -13,9 +13,9 @@ extern int show_line (uint8_t **pos);
 extern int str2mid (uint8_t **text, uint8_t *buff, int buffsize);
 
 extern LineBuffer *LineBuffer_new (void);
-extern int LineBuffer_console (LineBuffer *ln);
+extern int LineBuffer_console (LineBuffer *ln, EditorBuffer *ed);
 extern uint8_t *LineBuffer_get_midbuffer (LineBuffer *ln);
-
+extern EditorBuffer *EditorBuffer_new (void);
 
 extern uint8_t basic_word[];
 extern uint8_t operator_word[];
@@ -29,39 +29,17 @@ int main (int ac, char *av[])
 {
     uint8_t *text, *pos;
     int rv;
-	LineBuffer *ln;
-	
+    LineBuffer *ln;
+    EditorBuffer *ed;
+
     //~ if (ac < 2) {
         //~ puts ("usage:\nbasic text");
         //~ return 0;
     //~ }
-    
-	ln = LineBuffer_new ();
-    for (;;) {
-		rv = LineBuffer_console (ln);
-		printf ("中間コードの長さ %d\n", rv);
-        //~ putchar ('\n');
-        //~ pos = textbuff;
-        //~ while (*pos != B_EOT) {
-            //~ printf ("%02X ", *pos++);
-        //~ }
-        //~ putchar ('\n');
+    ed = EditorBuffer_new ();
+    ln = LineBuffer_new ();
+    rv = LineBuffer_console (ln, ed);
 
-        pos = LineBuffer_get_midbuffer (ln);
-
-        //~ if (*pos == B_NUM) {
-            //~ // 先頭が数値だったら編集モードにはいる
-            //~ if (editor_insert_and_replace (&pos)) {
-                //~ printf ("out of memory");
-            //~ }
-            //~ break;
-        //~ }
-
-        if (show_line (&pos)) {
-            puts ("undefind function");
-            break;
-        }
-    }
 exit_this:
     return 0;
 }

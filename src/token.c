@@ -234,7 +234,7 @@ int show_line (uint8_t **pos)
     int rv = 0;
     uint8_t *s;
 
-    while (**pos != B_EOT){
+    while (**pos != B_EOT || **pos != B_TOL){
         switch (**pos) {
             case B_HEXNUM:
                 ++*pos;
@@ -313,12 +313,12 @@ int str2mid (uint8_t **text, uint8_t *buff, int buffsize)
     uint8_t *pos = buff;
     uint8_t n;
     int16_t d;
-	
+
     while ((n = token (text)) != 0) {
         *pos++ = n;
         switch (n) {
             case B_EOT:
-				rv = (int)(pos - buff);
+                rv = (int)(pos - buff);
                 goto exit_this;
 
             case B_VAR:
