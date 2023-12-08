@@ -226,78 +226,80 @@ uint8_t token (uint8_t **text)
 }
 
 /*
- * 中間コード列からソースを表示する。EOLにあったら終わる。
- * 正常終了で 0 を返す。
+ * 中間コード列からソースを表示する。TOL,EOTにあったら終わる。
  */
-int show_line (uint8_t **pos)
+uint8_t *show_line (uint8_t *pos)
 {
-    int rv = 0;
     uint8_t *s;
 
-    while (**pos != B_EOT || **pos != B_TOL){
-        switch (**pos) {
+    while (*pos != B_EOT || *pos != B_TOL){
+        switch (*pos) {
             case B_HEXNUM:
-                ++*pos;
+                ++pos;
                 printf ("0X%X", *((uint16_t *)*pos));
-                ++*pos;
+                ++pos;
+                ++pos;
                 break;
             case B_BINNUM:
-                ++*pos;
+                ++pos;
                 uint16_t b = *((uint16_t *)*pos);
                 printf ("0B");
                 for (int i=0; i<16; i++) {
                     putchar ((b & 0x8000) ? '1':'0');
                     b <<= 1;
                 }
-                ++*pos;
+                ++pos;
+                ++pos;
                 break;
 
             case B_NUM:
-                ++*pos;
-                printf ("%d", *((uint16_t *)*pos));
-                ++*pos;
+                ++pos;
+                printf ("%d", *((uint16_t *)pos));
+                ++pos;
+                ++pos;
                 break;
 
             case B_STR:
-                ++*pos;
+                ++pos;
                 __putch ('\"');
-                while (**pos != B_STR){
-                    putchar (**pos);
-                    ++*pos;
+                while (*pos != B_STR){
+                    putchar (*pos);
+                    ++pos;
                 }
                 __putch ('\"');
+                pos++;
                 break;
 
             case B_REMARK:
-                ++*pos;
+                ++pos;
                 __putch ('\'');
-                while (**pos != B_EOT){
-                    putchar (**pos);
-                    ++*pos;
+                while (*pos != B_EOT){
+                    putchar (*pos);
+                    ++pos;
                 }
                 break;
 
             case B_VAR:
-                ++*pos;
-                __putch (**pos);
+                ++pos;
+                __putch (*pos);
+                pos++;
                 break;
 
             default:
-                s = code2word (**pos, B_NEG,   basic_word);
+                s = code2word (*pos, B_NEG,   basic_word);
                 if (s != NULL) {
-                    if (**pos >= B_BREAK) __putch (' ');
+                    if (*pos >= B_BREAK) __putch (' ');
                     put_basic_word (s, __putch);
-                    if (**pos >= B_BREAK) __putch (' ');
+                    if (*pos >= B_BREAK) __putch (' ');
+					pos++;
                     break;
                 }
-                rv = 1;
                 goto exit_this;
         }
-        ++*pos;
     }
 exit_this:
     __putch ('\n');
-    return rv;
+    return pos;
 }
 
 /*
@@ -318,6 +320,7 @@ int str2mid (uint8_t **text, uint8_t *buff, int buffsize)
         *pos++ = n;
         switch (n) {
             case B_EOT:
+				pos--;
                 rv = (int)(pos - buff);
                 goto exit_this;
 

@@ -9,7 +9,7 @@ extern void __putch (uint8_t c);
 extern uint8_t *code2word (uint8_t code, uint8_t topcode, uint8_t *s);
 extern void put_basic_word (uint8_t *s, void(*__putc)(uint8_t));
 extern int16_t get_number (uint8_t **text);
-extern int show_line (uint8_t **pos);
+extern uint8_t *show_line (uint8_t *pos);
 extern int str2mid (uint8_t **text, uint8_t *buff, int buffsize);
 
 extern LineBuffer *LineBuffer_new (void);

@@ -103,13 +103,13 @@ int LineBuffer_console (LineBuffer *ln, EditorBuffer *ed)
                 if (ln->wordbuff[3] == B_EOT) {
                     text = &ln->wordbuff[1];
                     editor_delete_line (ed, *((uint16_t *)text));
-                    continue;
                 }
                 ln->wordlen = rv;
                 editor_insert_and_replace (ed, ln);
-                continue;
             }
-            basic (ed, ln->wordbuff);
+            else {
+				basic (ed, ln->wordbuff);
+			}
         }
     }
     return rv;
@@ -169,9 +169,9 @@ void editor_delete_line (EditorBuffer *ed, uint16_t linenumber)
 printf ("現在の空き容量 : %d\n", ed->last);
     source = dest + *(dest + 3);
     len = (uint16_t)(ed->eot - dest);
-    memmove (dest, source, len + 1);
 printf ("source : %04X   dest : %04X   length : %d\n",
             source, dest, len);
+    memmove (dest, source, len + 1);
     ed->last += len;
     ed->eot -= len;
 printf ("現在の空き容量 : %d\n", ed->last);
