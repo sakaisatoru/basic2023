@@ -73,12 +73,13 @@ B_TO,
 B_F_PEEKW,
 B_F_PEEK,
 B_F_ABS,
+B_F_FREE,
 B_F_TIME,       // 経過時間
 B_F_YEAR,       // 年
 B_F_MONTH,      // 月
-B_F_DAY,        // 日
 
 // 0xc0
+B_F_DAY,        // 日
 B_F_HOUR,       // 時
 B_F_MIN,        // 分
 B_F_SECOND,     // 秒
@@ -86,8 +87,8 @@ B_F_ADC,        // A/D
 B_F_TEMP,       // 温度
 B_F_HUM,        // 湿度
 B_F_PRESS,      // 気圧
-B_NUM,          // 内部コード 数値
 
+B_NUM,          // 内部コード 数値
 B_HEXNUM,       // 内部コード 16進
 B_BINNUM,       // 内部コード 2進
 B_VAR,          // 内部コード 変数
@@ -101,3 +102,5 @@ typedef struct __LineBuffer     LineBuffer;
 typedef struct __EditorBuffer   EditorBuffer;
 
 int basic (EditorBuffer *ed, uint8_t *t);
+int16_t expression (uint8_t **pos, uint8_t endcode);
+void __dump (uint8_t *pos, int16_t bytes);

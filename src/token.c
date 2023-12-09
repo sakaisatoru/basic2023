@@ -39,10 +39,10 @@
 0x80|',',           // B_COMMA
 0x80|':',           // B_COLON
 0x80|';',           // B_SEMICOLON
-0x80|'@',           // B_ARRAY
+0x80|'@',           // B_ARRAY = 0xa0
 0x80|'\"',          // B_STR
 
-0x80|'B','R','E','A','K',   // 0xa0
+0x80|'B','R','E','A','K',
 0x80|'C','A','L','L',
 0x80|'C','O','N','T','I','N','U','E',
 0x80|'C','O','N','T',
@@ -70,6 +70,7 @@
 0x80|'P','E','E','K','W',
 0x80|'P','E','E','K',
 0x80|'A','B','S',
+0x80|'F','R','E','E',
 0x80|'T','I','M','E',
 0x80
 };
@@ -201,14 +202,14 @@ uint8_t token (uint8_t **text)
                     table++;    ++*text;
                 }
                 if ((0x80 & *table) == 0x80) {
-                    if ((p >= 'A' && p <= 'Z') && !(**text >= 'A' && **text <= 'Z')) {
-                        // 直前の文字(照合済)がアルファベットなら、記号を区切り文字とする
-                        return n;
+                    if (isalpha(p)) {
+                        // 最初の１文字がアルファベットで始まっている場合は、記号を区切り文字とする
+                        if (!isalpha(**text)) return n;
                     }
                     else {
-                        if ((**text >= 'A' && **text <= 'Z')||(**text>='0' && **text <='9')){
-                            return n;
-                        }
+                        // 記号の時はテーブル側の終わりしかみない
+                        // (不一致が生じた際にテーブル側が終わっていればそれで終わる)
+                        return n;
                     }
                 }
             }
@@ -291,7 +292,7 @@ uint8_t *show_line (uint8_t *pos)
                     if (*pos >= B_BREAK) __putch (' ');
                     put_basic_word (s, __putch);
                     if (*pos >= B_BREAK) __putch (' ');
-					pos++;
+                    pos++;
                     break;
                 }
                 goto exit_this;
@@ -320,7 +321,7 @@ int str2mid (uint8_t **text, uint8_t *buff, int buffsize)
         *pos++ = n;
         switch (n) {
             case B_EOT:
-				pos--;
+                pos--;
                 rv = (int)(pos - buff);
                 goto exit_this;
 

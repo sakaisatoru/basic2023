@@ -66,8 +66,8 @@ uint8_t *LineBuffer_get_midbuffer (LineBuffer *ln)
 EditorBuffer *EditorBuffer_new (void)
 {
     editerbuf.last = sizeof(editerbuf.textarea) - 1;
-    editerbuf.eot = &editerbuf.textarea[0];
-    editerbuf.textarea[0] = B_EOT;
+    editerbuf.eot = editerbuf.textarea;
+    *editerbuf.eot = B_EOT;
     return &editerbuf;
 }
 
@@ -85,6 +85,7 @@ int LineBuffer_console (LineBuffer *ln, EditorBuffer *ed)
     int rv;
 
     for (;;) {
+        printf ("OK\n");
         fgets (ln->inputbuffer, sizeof(ln->inputbuffer)-1, stdin);
         ln->pos = strchr (ln->inputbuffer, '\n');
         if (ln->pos != NULL) *(ln->pos) = '\0';
@@ -101,15 +102,18 @@ int LineBuffer_console (LineBuffer *ln, EditorBuffer *ed)
         else {
             if (ln->wordbuff[0] == B_NUM) {
                 if (ln->wordbuff[3] == B_EOT) {
+                    // 行削除
                     text = &ln->wordbuff[1];
                     editor_delete_line (ed, *((uint16_t *)text));
                 }
-                ln->wordlen = rv;
-                editor_insert_and_replace (ed, ln);
+                else {
+                    ln->wordlen = rv;
+                    editor_insert_and_replace (ed, ln);
+                }
             }
             else {
-				basic (ed, ln->wordbuff);
-			}
+                basic (ed, ln->wordbuff);
+            }
         }
     }
     return rv;
@@ -160,21 +164,22 @@ uint8_t *editor_search_line (EditorBuffer *ed, uint16_t linenumber, uint8_t *pos
 void editor_delete_line (EditorBuffer *ed, uint16_t linenumber)
 {
     uint8_t *dest, *source;
-    uint16_t len;
+    uint16_t len, l;
     int cdx;
 
     dest = editor_search_line (ed, linenumber, NULL, &cdx);
     if (cdx == 1) return; // undefind
 
-printf ("現在の空き容量 : %d\n", ed->last);
-    source = dest + *(dest + 3);
-    len = (uint16_t)(ed->eot - dest);
-printf ("source : %04X   dest : %04X   length : %d\n",
-            source, dest, len);
+//~ printf ("現在の空き容量 : %d\n", ed->last);
+    l = *(dest + 3);
+    source = dest + l;
+    len = (uint16_t)(ed->eot - source);
+//~ printf ("source : %04X   dest : %04X   length : %d\n",
+            //~ source, dest, len);
     memmove (dest, source, len + 1);
-    ed->last += len;
+    ed->last += l;
     ed->eot -= len;
-printf ("現在の空き容量 : %d\n", ed->last);
+//~ printf ("現在の空き容量 : %d\n", ed->last);
 }
 
 
@@ -185,7 +190,7 @@ printf ("現在の空き容量 : %d\n", ed->last);
 int editor_insert_and_replace (EditorBuffer *ed, LineBuffer *ln)
 {
     int rv = 0;
-    uint16_t n;
+    uint16_t n, len, l;
     uint8_t *dest, *source;
 
     if (ed->last < ln->wordlen +1) return -1;   // out of memory.
@@ -196,15 +201,18 @@ int editor_insert_and_replace (EditorBuffer *ed, LineBuffer *ln)
     if (rv == 0) {
         // 置換
         // 既存行を削除する
-        source = dest + *(dest + 3);
-        n = (uint16_t)(ed->eot - dest);
-        memmove (dest, source, n + 1);
-        ed->last += n;
-        ed->eot -= n;
+        l = *(dest + 3);
+        source = dest + l;
+        len = (uint16_t)(ed->eot - source);
+        memmove (dest, source, len + 1);
+        ed->last += l;
+        ed->eot -= len;
     }
 
     // 挿入
-    memmove (dest + ln->wordlen +1, dest, ln->wordlen+1);
+    //~ memmove (dest + ln->wordlen +1, dest, ln->wordlen+1);
+    memmove (dest + ln->wordlen +1, dest, (ed->eot - dest + 1));
+    ed->eot += (ln->wordlen +1);
     dest[0] = B_TOL;
     dest[1] = ln->wordbuff[1];
     dest[2] = ln->wordbuff[2];

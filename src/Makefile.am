@@ -5,6 +5,7 @@ AM_CPPFLAGS = -DDATADIR=\"$(datadir)\" -DICONDIR=\"$(datadir)/pixmaps\" -DLOCALE
 tinybasic_SOURCES = \
 			basic.h	\
 			basic.c	\
+			expression.c \
 			main.c	\
 			token.c	\
 			editor.c
