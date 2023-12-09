@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <ctype.h>
 #include "basic.h"
 
 extern uint8_t *show_line (uint8_t *pos);
@@ -21,8 +22,8 @@ typedef struct {
             uint8_t *address;   // 分岐先アドレス
         } STACK;
 #define STACKSIZE   16
-STACK stack[STACKSIZE];
-int stackpointer;
+static STACK stack[STACKSIZE];
+static int stackpointer;
 
  void __dump (uint8_t *pos, int16_t bytes)
 {
@@ -78,8 +79,9 @@ STACK *stack_pop (void)
 
 int basic (EditorBuffer *ed, uint8_t *t)
 {
-    uint8_t *pos, c, *currtop, currlen, *jmp ;
+    uint8_t *pos, c, *currtop, currlen, *jmp;
     int16_t n, n1, currline;
+    int f;
     STACK *sp;
 
     currtop = NULL; // 実行中の行の先頭
@@ -90,6 +92,19 @@ int basic (EditorBuffer *ed, uint8_t *t)
     __dump (t, 64);
     while (*t != B_EOT) {
         switch (*t++) {
+            case B_END:
+                return 0;
+
+            case B_STOP:
+                return 0;
+
+            case B_RUN:
+                t = EditorBuffer_get_textarea (ed);
+                currtop = t;
+                currline = *((int16_t*)(t+1));
+                currlen = *(t+3);
+                continue;
+
             case B_RETURN:
                 if (stack_check ()) {
                     puts ("return without gosub.");
@@ -105,7 +120,6 @@ int basic (EditorBuffer *ed, uint8_t *t)
                 continue;
 
             case B_GOSUB:
-                puts ("GOSUB!");
                 if (*t != B_NUM) {
                     puts ("syntax error.");
                     return 0;
@@ -114,14 +128,13 @@ int basic (EditorBuffer *ed, uint8_t *t)
                     puts ("stack over flow.");
                     return 0;
                 }
-                puts ("hoge");
                 t++;
                 n = *((int16_t*)t);
                 t++;
                 t++;
                 jmp = editor_search_line (ed, (uint16_t)n,
-                                                        ((currline < n)? t : NULL), &n1);
-                if (n1 == 1) {
+                                                        ((currline < n)? t : NULL), &f);
+                if (f == 1) {
                     puts ("undefined line.");
                     return 0;
                 }
@@ -130,7 +143,6 @@ int basic (EditorBuffer *ed, uint8_t *t)
                 continue;
 
             case B_GOTO:
-                puts ("GOTO!");
                 if (*t != B_NUM) {
                     puts ("syntax error.");
                     return 0;
@@ -140,8 +152,8 @@ int basic (EditorBuffer *ed, uint8_t *t)
                 t++;
                 t++;
                 jmp = editor_search_line (ed, (uint16_t)n,
-                                                        ((currline < n)? t : NULL), &n1);
-                if (n1 == 1) {
+                                                        ((currline < n)? t : NULL), &f);
+                if (f == 1) {
                     puts ("undefined line.");
                     return 0;
                 }

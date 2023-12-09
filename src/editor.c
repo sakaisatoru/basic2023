@@ -130,12 +130,14 @@ int LineBuffer_console (LineBuffer *ln, EditorBuffer *ed)
  * pos : 検索開始位置 NULL の場合はバッファ先頭から探す
  * cdx : 検索結果
  */
-uint8_t *editor_search_line (EditorBuffer *ed, uint16_t linenumber, uint8_t *pos, int *cdx)
+uint8_t *editor_search_line (EditorBuffer *ed, uint16_t linenumber, uint8_t *p, int *cdx)
 {
     uint16_t n;
+    uint8_t *pos;
 
     *cdx = 0;
-    if (pos == NULL) pos = ed->textarea;
+    pos = (p == NULL) ? ed->textarea : p;
+
     for (;;) {
         if (*pos == B_EOT) {
             *cdx = 1;
