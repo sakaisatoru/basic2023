@@ -46,11 +46,12 @@ static uint8_t basic_word[] = {
 0x80|'@',           // B_ARRAY = 0xa0
 0x80|'\"',          // B_STR
 
-0x80|'B','R','E','A','K',
+//~ 0x80|'B','R','E','A','K',
 0x80|'C','A','L','L',
 0x80|'C','L','E','A','R',
-0x80|'C','O','N','T','I','N','U','E',
+//~ 0x80|'C','O','N','T','I','N','U','E',
 0x80|'C','O','N','T',
+0x80|'D','A','T','A',
 0x80|'D','I','M',
 0x80|'E','N','D',
 0x80|'F','O','R',
@@ -63,9 +64,12 @@ static uint8_t basic_word[] = {
 0x80|'L','O','A','D',
 0x80|'N','E','W',
 0x80|'N','E','X','T',
+0x80|'O','N',
 0x80|'P','O','K','E','W',
 0x80|'P','O','K','E',
 0x80|'P','R','I','N','T',
+0x80|'R','E','A','D',
+0x80|'R','E','S','T','O','R','E',
 0x80|'R','E','T','U','R','N',
 0x80|'R','U','N',
 0x80|'S','A','V','E',
@@ -211,9 +215,8 @@ uint8_t token (uint8_t **text)
                         if (!isalpha(**text)) return n;
                     }
                     else {
-                        // 記号の時はテーブル側の終わりしかみない
-                        // (不一致が生じた際にテーブル側が終わっていればそれで終わる)
-                        return n;
+                        // 記号の時はアルファベット、数字、空白を区切りとする
+                        if (isalnum(**text) || **text == ' ') return n;
                     }
                 }
             }
@@ -293,10 +296,9 @@ uint8_t *show_line (uint8_t *pos)
             default:
                 s = code2word (*pos, B_NEG,   basic_word);
                 if (s != NULL) {
-                    //~ if (*pos >= B_BREAK) putchar (' ');
                     if (*pos == B_THEN || *pos == B_TO) putchar (' ');
                     put_basic_word (s, __putch);
-                    if (*pos >= B_BREAK) putchar (' ');
+                    if (*pos >= B_CALL) putchar (' ');
                     pos++;
                     break;
                 }

@@ -41,11 +41,10 @@ enum {
     B_ARRAY,        // @    内部コード 配列
     B_STR,          // "    内部コード 文字列
 
-    B_BREAK,        // 0xa2
-    B_CALL,
+    B_CALL,         // 0xa2
     B_CLEAR,
-    B_CONTINUE,
     B_CONT,
+    B_DATA,
     B_DIM,
     B_END,
     B_FOR,
@@ -55,13 +54,16 @@ enum {
     B_INPUT,
     B_LET,
     B_LIST,
+    B_LOAD,
 
-    B_LOAD,         // 0xb0
-    B_NEW,
+    B_NEW,          // 0xb0
     B_NEXT,
+    B_ON,
     B_POKEW,
     B_POKE,
     B_PRINT,
+    B_READ,
+    B_RESTORE,
     B_RETURN,
     B_RUN,
     B_SAVE,
@@ -69,12 +71,12 @@ enum {
     B_THEN,
     B_TO,
 
-    B_F_PEEKW,      // 0xbc
+    B_F_PEEKW,      // 0xbe
     B_F_PEEK,
     B_F_ABS,
     B_F_RND,
 
-    B_F_FREE,       // 0xc0
+    B_F_FREE,       // 0xc2
     B_F_TIME,       // 経過時間
     B_F_YEAR,       // 年
     B_F_MONTH,      // 月
@@ -92,7 +94,7 @@ enum {
     B_BINNUM,       // 内部コード 2進
     B_VAR,          // 内部コード 変数
 
-                    //0xd0
+                    //0xd2
     B_EOT,          // end of text
     B_TOL,          // top of line
 };

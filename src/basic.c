@@ -98,6 +98,18 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
     //~ __dump (t, 64);
     while (*t != B_EOT) {
         switch (*t++) {
+            default:
+                return B_ERR_SYNTAX_ERROR;
+
+            case B_NEW:
+                if (ed->currtop != NULL) {
+                    // 実行中に呼び出された
+                    return B_ERR_ILLEAGAL_FUNCTION_CALL;
+                }
+                EditorBuffer_new ();
+                stackpointer = -1;
+                return B_ERR_NO_ERROR;
+
             case B_END:
                 return 0;
 
@@ -225,7 +237,7 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
                 if (n == 0) {
                     if (ed->currtop == NULL) {
                         // ダイレクトモードを終わる
-                        return 0;
+                        return B_ERR_NO_ERROR;
                     }
                     t = ed->currtop + ed->currlen;
                 }
@@ -312,6 +324,7 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
                     }
                 }
                 pos = EditorBuffer_search_line (ed, start, NULL, &f);
+                __dump (pos, 64);
                 while (*pos != B_EOT) {
                     if (*pos == B_TOL) {
                         ++pos;
