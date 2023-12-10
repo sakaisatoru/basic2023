@@ -1,12 +1,13 @@
+#ifdef HAVE_CONFIG_H
+#   include "config.h"
+#endif
+
 #include <stdint.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <ctype.h>
 #include "basic.h"
 
-extern uint8_t *show_line (uint8_t *pos);
-extern uint8_t *EditorBuffer_get_textarea (EditorBuffer *ed);
-extern uint8_t *editor_search_line (EditorBuffer *ed, uint16_t linenumber, uint8_t *pos, int *cdx);
 
 extern int16_t _var[26];
 
@@ -65,8 +66,8 @@ STACK *stack_push (uint8_t type, uint8_t var, int16_t value, uint8_t *address)
 {
     stackpointer++;
     if (stackpointer >= STACKSIZE) return NULL;
-    stack[stackpointer].type = type;
-    stack[stackpointer].var  = var;
+    stack[stackpointer].type    = type;
+    stack[stackpointer].var     = var;
     stack[stackpointer].value   = value;
     stack[stackpointer].address = address;
     return &stack[stackpointer];
@@ -77,19 +78,24 @@ STACK *stack_pop (void)
     return (stackpointer < 0) ? NULL: &stack[stackpointer--];
 }
 
-int basic (EditorBuffer *ed, uint8_t *t)
+/*
+ * BASICインタープリタ本体
+ * エラーコードを返す
+ */
+int16_t basic (EditorBuffer *ed, uint8_t *t)
 {
-    uint8_t *pos, c, *currtop, currlen, *jmp;
-    int16_t n, n1, currline;
-    int f;
+    uint8_t *pos, c, *jmp;
+    int16_t n, n1;
+    int16_t e, f;
+    uint16_t start, end;
     STACK *sp;
 
-    currtop = NULL; // 実行中の行の先頭
-    currlen = 0;    // 実行中の行の長さ
-    currline = 0;
+    ed->currtop = NULL; // 実行中の行の先頭
+    ed->currlen = 0;    // 実行中の行の長さ
+    ed->currline = 0;
 
     stackpointer = -1;
-    __dump (t, 64);
+    //~ __dump (t, 64);
     while (*t != B_EOT) {
         switch (*t++) {
             case B_END:
@@ -100,20 +106,18 @@ int basic (EditorBuffer *ed, uint8_t *t)
 
             case B_RUN:
                 t = EditorBuffer_get_textarea (ed);
-                currtop = t;
-                currline = *((int16_t*)(t+1));
-                currlen = *(t+3);
+                ed->currtop = t;
+                ed->currline = *((int16_t*)(t+1));
+                ed->currlen = *(t+3);
                 continue;
 
             case B_RETURN:
                 if (stack_check ()) {
-                    puts ("return without gosub.");
-                    return 0;
+                    return B_ERR_RETURN_WITHOUT_GOSUB;
                 }
                 sp = stack_tos ();
                 if (sp->type != STACK_TYPE_GOSUB) {
-                    puts ("return without gosub.");
-                    return 0;
+                    return B_ERR_RETURN_WITHOUT_GOSUB;
                 }
                 sp = stack_pop ();
                 t = sp->address;
@@ -121,22 +125,20 @@ int basic (EditorBuffer *ed, uint8_t *t)
 
             case B_GOSUB:
                 if (*t != B_NUM) {
-                    puts ("syntax error.");
-                    return 0;
+                    return B_ERR_SYNTAX_ERROR;
                 }
                 if (stack_check () > 0) {
-                    puts ("stack over flow.");
-                    return 0;
+                    return B_ERR_STACK_OVER_FLOW;
                 }
                 t++;
                 n = *((int16_t*)t);
                 t++;
                 t++;
-                jmp = editor_search_line (ed, (uint16_t)n,
-                                                        ((currline < n)? t : NULL), &f);
+                jmp = EditorBuffer_search_line (ed, (uint16_t)n,
+                                ((ed->currline == 0)? NULL: /* direct mode */
+                                (ed->currline < n)? t : NULL), &f);
                 if (f == 1) {
-                    puts ("undefined line.");
-                    return 0;
+                    return B_ERR_UNDEFINED_LINE;
                 }
                 stack_push (STACK_TYPE_GOSUB, 0, 0, t);
                 t = jmp;
@@ -144,31 +146,28 @@ int basic (EditorBuffer *ed, uint8_t *t)
 
             case B_GOTO:
                 if (*t != B_NUM) {
-                    puts ("syntax error.");
-                    return 0;
+                    return B_ERR_SYNTAX_ERROR;
                 }
                 t++;
                 n = *((int16_t*)t);
                 t++;
                 t++;
-                jmp = editor_search_line (ed, (uint16_t)n,
-                                                        ((currline < n)? t : NULL), &f);
+                jmp = EditorBuffer_search_line (ed, (uint16_t)n,
+                                ((ed->currline == 0)? NULL: /* direct mode */
+                                (ed->currline < n)? t : NULL), &f);
                 if (f == 1) {
-                    puts ("undefined line.");
-                    return 0;
+                    return B_ERR_UNDEFINED_LINE;
                 }
                 t = jmp;
                 continue;
 
             case B_NEXT:
                 if (stack_check ()) {
-                    puts ("next without for.");
-                    return 0;
+                    return B_ERR_NEXT_WITHOUT_FOR;
                 }
                 sp = stack_tos ();
                 if (sp->type != STACK_TYPE_FOR) {
-                    puts ("next without for.");
-                    return 0;
+                    return B_ERR_NEXT_WITHOUT_FOR;
                 }
                 if (_var[sp->var] >= sp->value) {
                     stack_pop ();
@@ -181,29 +180,27 @@ int basic (EditorBuffer *ed, uint8_t *t)
 
             case B_FOR:
                 if (stack_check () > 0) {
-                    puts ("stack over flow.");
-                    return 0;
+                    return B_ERR_STACK_OVER_FLOW;
                 }
                 if (*t != B_VAR) {
-                    puts ("syntax error.\n");
-                    return 0;
+                    return B_ERR_SYNTAX_ERROR;
                 }
                 t++;
                 if (!isalpha(*t)) {
-                    puts ("syntax error.\n");
-                    return 0;
+                    return B_ERR_SYNTAX_ERROR;
                 }
                 c = (*t-'A');
                 t++;
                 if (*t == B_EQ2) {
                     t++;
-                    n = expression (&t, B_TO);
+                    n = expression (&t, B_TO, &e);
+                    if (e) return e;
                 }
                 else {
-                    puts ("syntax error.\n");
-                    return 0;
+                    return B_ERR_SYNTAX_ERROR;
                 }
-                n1 = expression (&t, 0);
+                n1 = expression (&t, 0, &e);
+                if (e) return e;
                 stack_push (STACK_TYPE_FOR, c, n1, t);
                 _var[c] = n;
                 continue;
@@ -214,22 +211,23 @@ int basic (EditorBuffer *ed, uint8_t *t)
             case B_TOL:
                 // 行番号
                 t--;
-                currtop = t;
+                ed->currtop = t;
                 t++;
-                currline = *((int16_t *)t);
+                ed->currline = *((int16_t *)t);
                 t++;
                 t++;
-                currlen = *t++;
+                ed->currlen = *t++;
                 continue;
 
             case B_IF:
-                n = expression (&t, B_THEN);
+                n = expression (&t, B_THEN, &e);
+                if (e) return e;
                 if (n == 0) {
-                    if (currtop == NULL) {
+                    if (ed->currtop == NULL) {
                         // ダイレクトモードを終わる
                         return 0;
                     }
-                    t = currtop + currlen;
+                    t = ed->currtop + ed->currlen;
                 }
                 continue;
 
@@ -237,25 +235,23 @@ int basic (EditorBuffer *ed, uint8_t *t)
                 if (*t == B_VAR) {
                     continue;
                 }
-                puts ("syntax error.\n");
-                return 0;
+                return B_ERR_SYNTAX_ERROR;
 
             case B_VAR:
                 // LET省略
                 if (!isalpha(*t)) {
-                    puts ("syntax error.\n");
-                    return 0;
+                    return B_ERR_SYNTAX_ERROR;
                 }
                 c = (*t-'A');
                 t++;
                 if (*t == B_EQ2) {
                     t++;
-                    n = expression (&t, 0);
+                    n = expression (&t, 0, &e);
+                    if (e) return e;
                     _var[c] = n;
                     continue;
                 }
-                puts ("syntax error.\n");
-                return 0;
+                return B_ERR_SYNTAX_ERROR;
 
             case B_COLON:
             case B_SEMICOLON:
@@ -287,19 +283,41 @@ int basic (EditorBuffer *ed, uint8_t *t)
                             }
                     }
                     else {
-                        n = expression (&t, 0);
+                        n = expression (&t, 0, &e);
+                        if (e) return e;
                         printf ("%d",n);
                     }
                 }
                 break;
 
             case B_LIST:
-                //~ __dump (EditorBuffer_get_textarea (ed), 64);  getchar();
-                pos = EditorBuffer_get_textarea (ed);
+                start = 0;
+                end = 65535;
+                if (*t == B_NUM) {
+                    t++;
+                    start = *((uint16_t*)t);
+                    t++;
+                    t++;
+                    if (*t != B_COMMA) {
+                        end = start;
+                    }
+                }
+                if (*t == B_COMMA) {
+                    t++;
+                    if (*t == B_NUM) {
+                        t++;
+                        end = *((uint16_t*)t);
+                        t++;
+                        t++;
+                    }
+                }
+                pos = EditorBuffer_search_line (ed, start, NULL, &f);
                 while (*pos != B_EOT) {
                     if (*pos == B_TOL) {
                         ++pos;
-                        printf ("%d ", *((uint16_t *)pos));
+                        start = *((uint16_t *)pos);
+                        if (start > end) break;
+                        printf ("%d ", start);
                         ++pos;++pos;
                         ++pos;
                         continue;
@@ -309,4 +327,5 @@ int basic (EditorBuffer *ed, uint8_t *t)
                 break;
         }
     }
+    return B_ERR_NO_ERROR;
 }

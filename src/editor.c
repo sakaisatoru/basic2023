@@ -1,14 +1,17 @@
+#ifdef HAVE_CONFIG_H
+#   include "config.h"
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 #include <ctype.h>
 #include "basic.h"
 
-extern int str2mid (uint8_t **text, uint8_t *buff, int buffsize);
 
-uint8_t *editor_search_line (EditorBuffer *ed, uint16_t linenumber, uint8_t *pos, int *cdx);
-void editor_delete_line (EditorBuffer *ed, uint16_t linenumber);
-int editor_insert_and_replace (EditorBuffer *ed, LineBuffer *ln);
+void EditorBuffer_show_error_message (EditorBuffer *ed, int16_t err);
+void EditorBuffer_delete_line (EditorBuffer *ed, uint16_t linenumber);
+int16_t EditorBuffer_insert_and_replace (EditorBuffer *ed, LineBuffer *ln);
 
 /*
     BASIC 中間コードの格納状態
@@ -37,21 +40,32 @@ int editor_insert_and_replace (EditorBuffer *ed, LineBuffer *ln);
 */
 
 struct __LineBuffer {
-        uint8_t inputbuffer[256];   // 入力バッファ
-        uint8_t *pos;
-        int len;
-        uint8_t wordbuff[128];      // 中間コード格納バッファ
-        uint8_t wordlen;
+        uint8_t     inputbuffer[256];   // 入力バッファ
+        uint8_t    *pos;
+        //~ int len;
+        uint8_t     wordbuff[128];      // 中間コード格納バッファ
+        uint8_t     wordlen;
 };
-
+#if 0
 struct __EditorBuffer {
-        uint8_t textarea[1024];
-        uint8_t *eot;           // 末尾
-        int     last;           // 残り容量
+        uint8_t     textarea[1024];
+        uint8_t    *eot;        // 末尾
+        uint16_t    last;       // 残り容量
+        uint8_t    *currtop;    // 実行中の行の先頭
+        uint8_t     currlen;    // 実行中の行の長さ
+        int16_t     currline;   // 実行中の行番号
 };
+#endif
 
 static LineBuffer lnbuf;
-static EditorBuffer editerbuf;
+static EditorBuffer editorbuf;
+
+void EditorBuffer_start_message (EditorBuffer *ed)
+{
+    puts (  PACKAGE_STRING"\n"
+            "by endeavor_wako since 2023");
+    printf ("%d bytes free.\n", ed->last);
+}
 
 LineBuffer *LineBuffer_new (void)
 {
@@ -65,10 +79,13 @@ uint8_t *LineBuffer_get_midbuffer (LineBuffer *ln)
 
 EditorBuffer *EditorBuffer_new (void)
 {
-    editerbuf.last = sizeof(editerbuf.textarea) - 1;
-    editerbuf.eot = editerbuf.textarea;
-    *editerbuf.eot = B_EOT;
-    return &editerbuf;
+    editorbuf.last = sizeof(editorbuf.textarea) - 1;
+    editorbuf.eot = editorbuf.textarea;
+    *editorbuf.eot = B_EOT;
+    editorbuf.currtop = NULL;   // 実行中の行の先頭
+    editorbuf.currlen = 0;      // 実行中の行の長さ
+    editorbuf.currline = 0;     // 実行中の行番号
+    return &editorbuf;
 }
 
 uint8_t *EditorBuffer_get_textarea (EditorBuffer *ed)
@@ -79,10 +96,10 @@ uint8_t *EditorBuffer_get_textarea (EditorBuffer *ed)
 /*
  * １行分の入力を受付け、中間コードに変換する
  */
-int LineBuffer_console (LineBuffer *ln, EditorBuffer *ed)
+void LineBuffer_console (LineBuffer *ln, EditorBuffer *ed)
 {
     uint8_t *text;
-    int rv;
+    int16_t err, len;
 
     for (;;) {
         printf ("OK\n");
@@ -92,31 +109,31 @@ int LineBuffer_console (LineBuffer *ln, EditorBuffer *ed)
         else ln->inputbuffer[sizeof(ln->inputbuffer)-1] = '\0';
 
         ln->pos = ln->inputbuffer;
-        rv = str2mid (&ln->pos, ln->wordbuff, sizeof(ln->wordbuff));
-        if (rv == -1) {
-            printf ("buffer overflow.");
+        len = str2mid (&ln->pos, ln->wordbuff, sizeof(ln->wordbuff));
+        if (len == -1) {
+            EditorBuffer_show_error_message (ed, B_ERR_BUFFER_OVER_FLOW);
         }
-        else if (rv == -2) {
-            printf ("undefined word.");
+        else if (len == -2) {
+            EditorBuffer_show_error_message (ed, B_ERR_SYNTAX_ERROR);
         }
         else {
             if (ln->wordbuff[0] == B_NUM) {
                 if (ln->wordbuff[3] == B_EOT) {
                     // 行削除
                     text = &ln->wordbuff[1];
-                    editor_delete_line (ed, *((uint16_t *)text));
+                    EditorBuffer_delete_line (ed, *((uint16_t *)text));
                 }
                 else {
-                    ln->wordlen = rv;
-                    editor_insert_and_replace (ed, ln);
+                    ln->wordlen = len;
+                    EditorBuffer_insert_and_replace (ed, ln);
                 }
             }
             else {
-                basic (ed, ln->wordbuff);
+                err = basic (ed, ln->wordbuff);
+                if (err) EditorBuffer_show_error_message (ed, err);
             }
         }
     }
-    return rv;
 }
 
 
@@ -130,7 +147,7 @@ int LineBuffer_console (LineBuffer *ln, EditorBuffer *ed)
  * pos : 検索開始位置 NULL の場合はバッファ先頭から探す
  * cdx : 検索結果
  */
-uint8_t *editor_search_line (EditorBuffer *ed, uint16_t linenumber, uint8_t *p, int *cdx)
+uint8_t *EditorBuffer_search_line (EditorBuffer *ed, uint16_t linenumber, uint8_t *p, int16_t *cdx)
 {
     uint16_t n;
     uint8_t *pos;
@@ -163,13 +180,13 @@ uint8_t *editor_search_line (EditorBuffer *ed, uint16_t linenumber, uint8_t *p, 
 /*
  * 指定行を削除する
  */
-void editor_delete_line (EditorBuffer *ed, uint16_t linenumber)
+void EditorBuffer_delete_line (EditorBuffer *ed, uint16_t linenumber)
 {
     uint8_t *dest, *source;
     uint16_t len, l;
-    int cdx;
+    int16_t cdx;
 
-    dest = editor_search_line (ed, linenumber, NULL, &cdx);
+    dest = EditorBuffer_search_line (ed, linenumber, NULL, &cdx);
     if (cdx == 1) return; // undefind
 
 //~ printf ("現在の空き容量 : %d\n", ed->last);
@@ -189,9 +206,9 @@ void editor_delete_line (EditorBuffer *ed, uint16_t linenumber)
  * 中間コード列の挿入・置換を行う
  *
  */
-int editor_insert_and_replace (EditorBuffer *ed, LineBuffer *ln)
+int16_t EditorBuffer_insert_and_replace (EditorBuffer *ed, LineBuffer *ln)
 {
-    int rv = 0;
+    int16_t rv = 0;
     uint16_t n, len, l;
     uint8_t *dest, *source;
 
@@ -199,7 +216,7 @@ int editor_insert_and_replace (EditorBuffer *ed, LineBuffer *ln)
 
     n = *((uint16_t *)&ln->wordbuff[1]);
 
-    dest = editor_search_line (ed, n, NULL, &rv);
+    dest = EditorBuffer_search_line (ed, n, NULL, &rv);
     if (rv == 0) {
         // 置換
         // 既存行を削除する
@@ -225,3 +242,35 @@ int editor_insert_and_replace (EditorBuffer *ed, LineBuffer *ln)
     return 0;
 }
 
+/*
+ * エラーメッセージを表示する
+ */
+void EditorBuffer_show_error_message (EditorBuffer *ed, int16_t err)
+{
+    uint8_t *errmessage[] = {
+        "No Error",
+        "Syntax Error",
+        "Illeagal function call",
+        "Next without for",
+        "Return without gosub",
+        "Out of memory",
+        "Stack over flow",
+        "Undefined line",
+        "Buffer over flow",
+
+        "Out of memory",
+    };
+
+    if (err <= B_ERR_NO_ERROR || err >= B_ERR_BAD_ERROR_CODE) {
+        printf ("%s", errmessage[B_ERR_BAD_ERROR_CODE]);
+    }
+    else {
+        printf ("%s", errmessage[err]);
+    }
+    if (ed->currline != 0) {
+        printf (" in %d\n", ed->currline);
+    }
+    else {
+        printf (".\n");
+    }
+}

@@ -1,12 +1,16 @@
 /*
  * 字句解析
  */
+#ifdef HAVE_CONFIG_H
+#   include "config.h"
+#endif
 
 #include <stdint.h>
 #include <stdio.h>
+#include <ctype.h>
 #include "basic.h"
 
- uint8_t basic_word[] = {
+static uint8_t basic_word[] = {
 0x80|'~',           // B_NEG = 0x81
 0x80|'!',           // B_NOT
 0x80|'+','+',       // B_INC
@@ -44,11 +48,12 @@
 
 0x80|'B','R','E','A','K',
 0x80|'C','A','L','L',
+0x80|'C','L','E','A','R',
 0x80|'C','O','N','T','I','N','U','E',
 0x80|'C','O','N','T',
+0x80|'D','I','M',
 0x80|'E','N','D',
 0x80|'F','O','R',
-0x80|'F','R','E','E',
 0x80|'G','O','S','U','B',
 0x80|'G','O','T','O',
 0x80|'I','F',
@@ -70,13 +75,12 @@
 0x80|'P','E','E','K','W',
 0x80|'P','E','E','K',
 0x80|'A','B','S',
+0x80|'R','N','D',
 0x80|'F','R','E','E',
 0x80|'T','I','M','E',
 0x80
 };
 
-
-#define SKPSPC  while(**text==' '||**text=='\t')++*text
 
 /*
  * 予約語を表示する
@@ -177,7 +181,7 @@ int16_t get_number (uint8_t **text)
 uint8_t token (uint8_t **text)
 {
     uint8_t n;
-    SKPSPC;
+    while(**text==' '||**text=='\t')++*text;
 
     if (**text >= '0' && **text <= '9') {
         n = (*(*text+1) == 'X') ? B_HEXNUM :
@@ -262,18 +266,18 @@ uint8_t *show_line (uint8_t *pos)
 
             case B_STR:
                 ++pos;
-                __putch ('\"');
+                putchar ('\"');
                 while (*pos != B_STR){
                     putchar (*pos);
                     ++pos;
                 }
-                __putch ('\"');
+                putchar ('\"');
                 pos++;
                 break;
 
             case B_REMARK:
                 ++pos;
-                __putch ('\'');
+                putchar ('\'');
                 while (*pos != B_EOT){
                     putchar (*pos);
                     ++pos;
@@ -282,16 +286,17 @@ uint8_t *show_line (uint8_t *pos)
 
             case B_VAR:
                 ++pos;
-                __putch (*pos);
+                putchar (*pos);
                 pos++;
                 break;
 
             default:
                 s = code2word (*pos, B_NEG,   basic_word);
                 if (s != NULL) {
-                    if (*pos >= B_BREAK) __putch (' ');
+                    //~ if (*pos >= B_BREAK) putchar (' ');
+                    if (*pos == B_THEN || *pos == B_TO) putchar (' ');
                     put_basic_word (s, __putch);
-                    if (*pos >= B_BREAK) __putch (' ');
+                    if (*pos >= B_BREAK) putchar (' ');
                     pos++;
                     break;
                 }
@@ -299,7 +304,7 @@ uint8_t *show_line (uint8_t *pos)
         }
     }
 exit_this:
-    __putch ('\n');
+    putchar ('\n');
     return pos;
 }
 
@@ -309,9 +314,9 @@ exit_this:
  * -1 : バッファオーバー
  * -2 : 未定義語が出現した
  */
-int str2mid (uint8_t **text, uint8_t *buff, int buffsize)
+int16_t str2mid (uint8_t **text, uint8_t *buff, int16_t buffsize)
 {
-    int rv = 0;
+    int16_t rv = 0;
 
     uint8_t *pos = buff;
     uint8_t n;
