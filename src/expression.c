@@ -30,7 +30,7 @@ int16_t factor (uint8_t **pos)
         case B_VAR:
             ++*pos;
             c = **pos - 'A';
-            if (c >= 25) {
+            if (c > 25) {
                 _b_err = B_ERR_SYNTAX_ERROR;    // Error exit
                 break;
             }
@@ -281,6 +281,7 @@ int16_t expression (uint8_t **pos, uint8_t endcode, int16_t *e)
             case B_EOT:
                 return n;
         }
+        printf ("%0X", **pos);
         *e = B_ERR_SYNTAX_ERROR;        // Error exit
         return n;
     }

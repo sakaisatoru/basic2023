@@ -79,12 +79,39 @@ STACK *stack_pop (void)
 }
 
 /*
+ * 指定された中間コードを探す
+ */
+uint8_t *basic_search_word (uint8_t c, uint8_t *t)
+{
+    while (*t != c) {
+        switch (*t) {
+            case B_EOT:         // テキスト末端
+                t = NULL;
+                goto exit_this;
+            case B_TOL:         // 行番号 (４進める）
+                t++;
+            case B_NUM:         // 数値 (３進める）
+            case B_BINNUM:
+            case B_HEXNUM:
+                t++;
+            case B_VAR:         // 変数（２進める）
+                t++;
+            default:            //　１進める
+                t++;
+                break;
+        }
+    }
+exit_this:
+    return t;
+}
+
+/*
  * BASICインタープリタ本体
  * エラーコードを返す
  */
 int16_t basic (EditorBuffer *ed, uint8_t *t)
 {
-    uint8_t *pos, c, *jmp;
+    uint8_t *pos, c, *jmp, *tmp;
     int16_t n, n1;
     int16_t e, f;
     uint16_t start, end;
@@ -101,6 +128,25 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
             default:
                 return B_ERR_SYNTAX_ERROR;
 
+            case B_READ:
+                if (*t != B_VAR) return B_ERR_SYNTAX_ERROR;
+                if (ed->readnext == NULL) {
+                    tmp = basic_search_word (B_DATA, ed->textarea);
+                    if (tmp == NULL) return B_ERR_NO_DATA;
+                    tmp++;
+                    ed->readnext = tmp;
+                }
+                c = (*t - 'A');
+                t++;
+                tmp = ed->readnext;
+                __dump (tmp, 64);
+                n = expression (&tmp, B_COMMA, &e);
+                if (e) return e;
+                if (*tmp == B_COMMA) tmp++;
+                ed->readnext = tmp;
+                _var[c] = n;
+                break;
+
             case B_NEW:
                 if (ed->currtop != NULL) {
                     // 実行中に呼び出された
@@ -111,7 +157,7 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
                 return B_ERR_NO_ERROR;
 
             case B_END:
-                return 0;
+                return B_ERR_NO_ERROR;
 
             case B_STOP:
                 return 0;

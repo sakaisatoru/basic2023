@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include "basic.h"
-
+#if 0
 static uint8_t basic_word[] = {
 0x80|'~',           // B_NEG = 0x81
 0x80|'!',           // B_NOT
@@ -45,7 +45,9 @@ static uint8_t basic_word[] = {
 0x80|';',           // B_SEMICOLON
 0x80|'@',           // B_ARRAY = 0xa0
 0x80|'\"',          // B_STR
+#endif
 
+static uint8_t basic_word[] = {
 //~ 0x80|'B','R','E','A','K',
 0x80|'C','A','L','L',
 0x80|'C','L','E','A','R',
@@ -184,8 +186,69 @@ int16_t get_number (uint8_t **text)
 
 uint8_t token (uint8_t **text)
 {
-    uint8_t n;
+    uint8_t n, *tmp;
     while(**text==' '||**text=='\t')++*text;
+
+    switch (**text) {
+        case '~':       n = B_NEG;      ++*text;return n; // 0x81
+        case '*':       n = B_MUL;      ++*text;return n;
+        case '/':       n = B_DIV;      ++*text;return n;
+        case '%':       n = B_MOD;      ++*text;return n;
+        case '^':       n = B_XOR;      ++*text;return n;
+        case '(':       n = B_OPENPAR;  ++*text;return n;
+        case ')':       n = B_CLOSEPAR; ++*text;return n;
+        case '\'':      n = B_REMARK;   ++*text;return n;
+        case ',':       n = B_COMMA;    ++*text;return n;
+        case ':':       n = B_COLON;    ++*text;return n;
+        case ';':       n = B_SEMICOLON; ++*text;return n;
+        case '@':       n = B_ARRAY;    ++*text;return n;
+        case '\"':      n = B_STR;      ++*text;return n;
+
+        case '!':
+            if (*(*text+1) == '=') {++*text; n = B_NEQ};
+            else n = B_NOT;
+            ++*text;
+            return n;
+        case '+':
+            if (*(*text+1) == '+') {++*text; n = B_INC};
+            else n = B_PLUS;
+            ++*text;
+            return n;
+        case '-':
+            if (*(*text+1) == '-') {++*text; n = B_DEC};
+            else n = B_PLUS;
+            ++*text;
+            return n;
+
+        case '<':
+            tmp = *text;
+            n = (tmp[1] == '<') ?
+                    ((tmp[2] == '<') ? B_LSHIFT2 : B_LSHIFT) :
+                (tmp[1] == '=') ? B_LE : B_LESS;
+            return n;
+
+        case '>':
+            tmp = *text;
+            n = (tmp[1] == '>') ?
+                    ((tmp[2] == '>') ? B_RSHIFT2 : B_RSHIFT) :
+                (tmp[1] == '=') ? B_GRE : B_GR;
+            return n;
+
+        case '=':
+            tmp = *text;
+            n = (tmp[1] == '=') ? B_EQ:B_EQ2;
+            return n;
+
+        case '|':
+            tmp = *text;
+            n = (tmp[1] == '|') ? B_OR:B_BINOR;
+            return n;
+
+        case '&':
+            tmp = *text;
+            n = (tmp[1] == '&') ? B_AND:B_BINAND;
+            return n;
+    }
 
     if (**text >= '0' && **text <= '9') {
         n = (*(*text+1) == 'X') ? B_HEXNUM :
@@ -201,7 +264,7 @@ uint8_t token (uint8_t **text)
         uint8_t *table = basic_word;
         uint8_t *subtext = *text;
         uint8_t p;
-        n = B_NEG;    // 予約語内部コードの先頭
+        n = B_CALL;    // 予約語内部コードの先頭
         while (*table != 0x80) {
             if ((0x7f & *table) == **text) {
                 p = **text;

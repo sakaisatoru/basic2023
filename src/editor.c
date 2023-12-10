@@ -85,6 +85,9 @@ EditorBuffer *EditorBuffer_new (void)
     editorbuf.currtop = NULL;   // 実行中の行の先頭
     editorbuf.currlen = 0;      // 実行中の行の長さ
     editorbuf.currline = 0;     // 実行中の行番号
+    editorbuf.breakline = 0;
+    editorbuf.breakpoint = NULL;
+    editorbuf.readnext = NULL;
     return &editorbuf;
 }
 
@@ -257,6 +260,7 @@ void EditorBuffer_show_error_message (EditorBuffer *ed, int16_t err)
         "Stack over flow",
         "Undefined line",
         "Buffer over flow",
+        "No DATA corresponding to READ",
 
         "Out of memory",
     };

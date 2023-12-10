@@ -91,7 +91,7 @@ enum {
 
     B_NUM,          // 内部コード 数値
     B_HEXNUM,       // 内部コード 16進
-    B_BINNUM,       // 内部コード 2進
+    B_BINNUM,       // 内部コード 2進     0xd0
     B_VAR,          // 内部コード 変数
 
                     //0xd2
@@ -109,6 +109,7 @@ enum {
     B_ERR_STACK_OVER_FLOW,
     B_ERR_UNDEFINED_LINE,
     B_ERR_BUFFER_OVER_FLOW,
+    B_ERR_NO_DATA,
 
     B_ERR_BAD_ERROR_CODE
 };
@@ -123,6 +124,8 @@ struct __EditorBuffer {
         int16_t     currline;   // 実行中の行番号
         int16_t     breakline;  // 現在の停止行
         uint8_t    *breakpoint; // 現在の停止位置
+        uint8_t    *readnext;   // READで次に読み込むデータの位置
+
 };
 
 
