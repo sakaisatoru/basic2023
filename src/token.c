@@ -306,18 +306,16 @@ uint8_t token (uint8_t **text)
 uint8_t *show_line (uint8_t *pos)
 {
     uint8_t *s;
-
-    while (*pos != B_EOT || *pos != B_TOL){
-        switch (*pos) {
+    uint16_t b;
+    while (*pos != B_EOT && *pos != B_TOL){
+        switch (*pos++) {
             case B_HEXNUM:
-                ++pos;
                 printf ("0X%X", *((uint16_t *)*pos));
                 ++pos;
                 ++pos;
                 break;
             case B_BINNUM:
-                ++pos;
-                uint16_t b = *((uint16_t *)*pos);
+                b = *((uint16_t *)*pos);
                 printf ("0B");
                 for (int i=0; i<16; i++) {
                     putchar ((b & 0x8000) ? '1':'0');
@@ -328,14 +326,12 @@ uint8_t *show_line (uint8_t *pos)
                 break;
 
             case B_NUM:
-                ++pos;
                 printf ("%d", *((uint16_t *)pos));
                 ++pos;
                 ++pos;
                 break;
 
             case B_STR:
-                ++pos;
                 putchar ('\"');
                 while (*pos != B_STR){
                     putchar (*pos++);
@@ -345,7 +341,6 @@ uint8_t *show_line (uint8_t *pos)
                 break;
 
             case B_REMARK:
-                ++pos;
                 putchar ('\'');
                 while (*pos != B_EOT && *pos != B_TOL){
                     putchar (*pos++);
@@ -353,11 +348,11 @@ uint8_t *show_line (uint8_t *pos)
                 break;
 
             case B_VAR:
-                ++pos;
                 putchar (*pos++);
                 break;
 
             default:
+                pos--;
                 s = code2word (*pos, B_NEG,   basic_word);
                 if (s != NULL) {
                     // 見た目を整えるため特定のワードは直前に空白を挿入する

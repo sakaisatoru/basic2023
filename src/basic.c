@@ -316,7 +316,11 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
                     _var[c] = n;
                     continue;
                 }
-                return B_ERR_SYNTAX_ERROR;
+                t--;
+                t--;
+                n = expression (&t, 0, &e); // 単行演算子の処理
+                if (e) return e;
+                break;
 
             case B_COLON:
             case B_SEMICOLON:
@@ -377,7 +381,7 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
                     }
                 }
                 pos = EditorBuffer_search_line (ed, start, NULL, &f);
-                //~ __dump (pos, 64);getchar();
+                __dump (pos, 64);getchar();
                 while (*pos != B_EOT) {
                     if (*pos == B_TOL) {
                         ++pos;
@@ -389,7 +393,7 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
                         continue;
                     }
                     pos = show_line (pos);
-                    //~ getchar();
+                    getchar();
                 }
                 break;
         }

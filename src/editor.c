@@ -190,7 +190,10 @@ void EditorBuffer_delete_line (EditorBuffer *ed, uint16_t linenumber)
     int16_t cdx;
 
     dest = EditorBuffer_search_line (ed, linenumber, NULL, &cdx);
-    if (cdx == 1) return; // undefind
+    if (cdx == 1) {
+        EditorBuffer_show_error_message (ed, B_ERR_UNDEFINED_LINE);
+        return; // undefind
+    }
 
 //~ printf ("現在の空き容量 : %d\n", ed->last);
     l = *(dest + 3);
