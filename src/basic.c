@@ -128,6 +128,13 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
             default:
                 return B_ERR_SYNTAX_ERROR;
 
+            case B_REMARK:
+                if (ed->currtop != NULL) {
+                    t = ed->currtop + ed->currlen;
+                    continue;
+                }
+                return B_ERR_SYNTAX_ERROR;  // direct modeでのremarkはエラー
+
             case B_READ:
                 if (*t != B_VAR) return B_ERR_SYNTAX_ERROR;
                 if (ed->readnext == NULL) {
@@ -370,7 +377,7 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
                     }
                 }
                 pos = EditorBuffer_search_line (ed, start, NULL, &f);
-                __dump (pos, 64);
+                //~ __dump (pos, 64);getchar();
                 while (*pos != B_EOT) {
                     if (*pos == B_TOL) {
                         ++pos;
@@ -382,6 +389,7 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
                         continue;
                     }
                     pos = show_line (pos);
+                    //~ getchar();
                 }
                 break;
         }

@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include "basic.h"
-#if 0
+
 static uint8_t basic_word[] = {
 0x80|'~',           // B_NEG = 0x81
 0x80|'!',           // B_NOT
@@ -35,8 +35,6 @@ static uint8_t basic_word[] = {
 0x80|'|',           // B_BINOR
 0x80|'^',           // B_XOR
 0x80|'&',           // B_BINAND
-0x80|'|','|',       // B_OR
-0x80|'&','&',       // B_AND
 0x80|'(',           // B_OPENPAR
 0x80|')',           // B_CLOSEPAR
 0x80|'\'',          // B_REMARK
@@ -45,13 +43,11 @@ static uint8_t basic_word[] = {
 0x80|';',           // B_SEMICOLON
 0x80|'@',           // B_ARRAY = 0xa0
 0x80|'\"',          // B_STR
-#endif
+0x80|'|','|',       // B_OR
+0x80|'&','&',       // B_AND
 
-static uint8_t basic_word[] = {
-//~ 0x80|'B','R','E','A','K',
 0x80|'C','A','L','L',
 0x80|'C','L','E','A','R',
-//~ 0x80|'C','O','N','T','I','N','U','E',
 0x80|'C','O','N','T',
 0x80|'D','A','T','A',
 0x80|'D','I','M',
@@ -190,63 +186,71 @@ uint8_t token (uint8_t **text)
     while(**text==' '||**text=='\t')++*text;
 
     switch (**text) {
-        case '~':       n = B_NEG;      ++*text;return n; // 0x81
-        case '*':       n = B_MUL;      ++*text;return n;
-        case '/':       n = B_DIV;      ++*text;return n;
-        case '%':       n = B_MOD;      ++*text;return n;
-        case '^':       n = B_XOR;      ++*text;return n;
-        case '(':       n = B_OPENPAR;  ++*text;return n;
-        case ')':       n = B_CLOSEPAR; ++*text;return n;
-        case '\'':      n = B_REMARK;   ++*text;return n;
-        case ',':       n = B_COMMA;    ++*text;return n;
-        case ':':       n = B_COLON;    ++*text;return n;
-        case ';':       n = B_SEMICOLON; ++*text;return n;
-        case '@':       n = B_ARRAY;    ++*text;return n;
-        case '\"':      n = B_STR;      ++*text;return n;
+        case '~':       ++*text; return B_NEG;
+        case '*':       ++*text; return B_MUL;
+        case '/':       ++*text; return B_DIV;
+        case '%':       ++*text; return B_MOD;
+        case '^':       ++*text; return B_XOR;
+        case '(':       ++*text; return B_OPENPAR;
+        case ')':       ++*text; return B_CLOSEPAR;
+        case '\'':      ++*text; return B_REMARK;
+        case ',':       ++*text; return B_COMMA;
+        case ':':       ++*text; return B_COLON;
+        case ';':       ++*text; return B_SEMICOLON;
+        case '@':       ++*text; return B_ARRAY;
+        case '\"':      ++*text; return B_STR;
 
         case '!':
-            if (*(*text+1) == '=') {++*text; n = B_NEQ};
-            else n = B_NOT;
-            ++*text;
-            return n;
+            return (++*text, (**text == '=')) ? (++*text, B_NEQ) : B_NOT;
+        case '=':
+            return (++*text, (**text == '=')) ? (++*text, B_EQ)  : B_EQ2;
         case '+':
-            if (*(*text+1) == '+') {++*text; n = B_INC};
-            else n = B_PLUS;
-            ++*text;
-            return n;
+            return (++*text, (**text == '+')) ? (++*text, B_INC) : B_PLUS;
         case '-':
-            if (*(*text+1) == '-') {++*text; n = B_DEC};
-            else n = B_PLUS;
-            ++*text;
-            return n;
+            return (++*text, (**text == '-')) ? (++*text, B_DEC) : B_MINUS;
+        case '|':
+            return (++*text, (**text == '|')) ? (++*text, B_OR)  : B_BINOR;
+        case '&':
+            return (++*text, (**text == '&')) ? (++*text, B_AND) : B_BINAND;
 
         case '<':
-            tmp = *text;
-            n = (tmp[1] == '<') ?
-                    ((tmp[2] == '<') ? B_LSHIFT2 : B_LSHIFT) :
-                (tmp[1] == '=') ? B_LE : B_LESS;
+            ++*text;
+            if (**text == '=') {
+                ++*text;
+                n = B_LE;
+                return n;
+            }
+            else if (**text == '<') {
+                ++*text;
+                if (**text == '<') {
+                    ++*text;
+                    n = B_LSHIFT2;
+                    return n;
+                }
+                n = B_LSHIFT;
+                return n;
+            }
+            n = B_LESS;
             return n;
 
         case '>':
-            tmp = *text;
-            n = (tmp[1] == '>') ?
-                    ((tmp[2] == '>') ? B_RSHIFT2 : B_RSHIFT) :
-                (tmp[1] == '=') ? B_GRE : B_GR;
-            return n;
-
-        case '=':
-            tmp = *text;
-            n = (tmp[1] == '=') ? B_EQ:B_EQ2;
-            return n;
-
-        case '|':
-            tmp = *text;
-            n = (tmp[1] == '|') ? B_OR:B_BINOR;
-            return n;
-
-        case '&':
-            tmp = *text;
-            n = (tmp[1] == '&') ? B_AND:B_BINAND;
+            ++*text;
+            if (**text == '=') {
+                ++*text;
+                n = B_GRE;
+                return n;
+            }
+            else if (**text == '>') {
+                ++*text;
+                if (**text == '>') {
+                    ++*text;
+                    n = B_RSHIFT2;
+                    return n;
+                }
+                n = B_RSHIFT;
+                return n;
+            }
+            n = B_GR;
             return n;
     }
 
@@ -264,7 +268,7 @@ uint8_t token (uint8_t **text)
         uint8_t *table = basic_word;
         uint8_t *subtext = *text;
         uint8_t p;
-        n = B_CALL;    // 予約語内部コードの先頭
+        n = B_NEG;    // 予約語内部コードの先頭
         while (*table != 0x80) {
             if ((0x7f & *table) == **text) {
                 p = **text;
@@ -334,8 +338,7 @@ uint8_t *show_line (uint8_t *pos)
                 ++pos;
                 putchar ('\"');
                 while (*pos != B_STR){
-                    putchar (*pos);
-                    ++pos;
+                    putchar (*pos++);
                 }
                 putchar ('\"');
                 pos++;
@@ -344,24 +347,25 @@ uint8_t *show_line (uint8_t *pos)
             case B_REMARK:
                 ++pos;
                 putchar ('\'');
-                while (*pos != B_EOT){
-                    putchar (*pos);
-                    ++pos;
+                while (*pos != B_EOT && *pos != B_TOL){
+                    putchar (*pos++);
                 }
                 break;
 
             case B_VAR:
                 ++pos;
-                putchar (*pos);
-                pos++;
+                putchar (*pos++);
                 break;
 
             default:
                 s = code2word (*pos, B_NEG,   basic_word);
                 if (s != NULL) {
-                    if (*pos == B_THEN || *pos == B_TO) putchar (' ');
+                    // 見た目を整えるため特定のワードは直前に空白を挿入する
+                    if (*pos == B_THEN || *pos == B_TO ||
+                        *pos == B_OR || *pos == B_AND) putchar (' ');
                     put_basic_word (s, __putch);
-                    if (*pos >= B_CALL) putchar (' ');
+                    // ワードは後方に空白を挿入する
+                    if (*pos >= B_OR) putchar (' ');
                     pos++;
                     break;
                 }
@@ -390,6 +394,13 @@ int16_t str2mid (uint8_t **text, uint8_t *buff, int16_t buffsize)
     while ((n = token (text)) != 0) {
         *pos++ = n;
         switch (n) {
+            case B_REMARK:
+                while (**text != '\0' && **text != '\n') {
+                    *pos++ = **text;
+                    ++*text;
+                }
+                *pos++ = B_EOT;
+
             case B_EOT:
                 pos--;
                 rv = (int)(pos - buff);

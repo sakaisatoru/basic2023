@@ -28,9 +28,6 @@ enum {
     B_XOR,          // ^
     B_BINAND,       // &
 
-    B_OR,           // ||
-    B_AND,          // &&
-
     B_OPENPAR,      // (
     B_CLOSEPAR,     // )
     B_REMARK,       // '    0x9c
@@ -40,6 +37,9 @@ enum {
 
     B_ARRAY,        // @    内部コード 配列
     B_STR,          // "    内部コード 文字列
+
+    B_OR,           // ||   B_OR以降のワードはソース表示時に後ろに空白を挿入する
+    B_AND,          // &&   B_OR, B_AND, B_THEN, B_TOは前にも空白を挿入する
 
     B_CALL,         // 0xa2
     B_CLEAR,
