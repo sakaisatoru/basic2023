@@ -281,7 +281,7 @@ int16_t expression (uint8_t **pos, uint8_t endcode, int16_t *e)
             case B_EOT:
                 return n;
         }
-        printf ("%0X", **pos);
+        //~ printf ("%0X", **pos);
         *e = B_ERR_SYNTAX_ERROR;        // Error exit
         return n;
     }
