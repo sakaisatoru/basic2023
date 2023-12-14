@@ -5,7 +5,26 @@
 
 
 
-int16_t (_basic_func)[] = {};
+int16_t (*_basic_func[])(uint8_t **t) = {
+ basic_f_reserved, // basic_f_peekw ,      // 0xbe
+ basic_f_reserved, // basic_f_peek ,
+ basic_f_abs ,
+ basic_f_rnd ,
+
+ basic_f_free ,       // 0xc2
+ basic_f_reserved, // basic_f_time ,       // 経過時間
+ basic_f_reserved, // basic_f_year ,       // 年
+ basic_f_reserved, // basic_f_month ,      // 月
+ basic_f_reserved, // basic_f_day ,        // 日
+ basic_f_reserved, // basic_f_hour ,       // 時
+ basic_f_reserved, // basic_f_min ,        // 分
+ basic_f_reserved, // basic_f_second ,     // 秒
+ basic_f_reserved, // basic_f_adc ,        // a/d
+ basic_f_reserved, // basic_f_temp ,       // 温度
+ basic_f_reserved, // basic_f_hum ,        // 湿度
+ basic_f_reserved, // basic_f_press ,      // 気圧
+
+	};
 
 
 
@@ -16,12 +35,70 @@ int16_t _var[26];
 static int16_t _b_err;
 #define CHECK_ERROR if(_b_err)return n
 
+int16_t basic_f_reserved (uint8_t **pos)
+{
+	return 0;
+}
+
+int16_t basic_f_abs (uint8_t **pos)
+{
+	int16_t n, e;
+	n = expression (pos, B_CLOSEPAR, &e);
+    if (n < 0) n *= -1;
+    _b_err = e;
+	return n;
+}
+
+extern int16_t _basic_free_area (void);
+int16_t basic_f_free (uint8_t **pos)
+{
+	int16_t n, e;
+
+	expression (pos, B_CLOSEPAR, &e);	// 現在、引数はダミー
+	n = _basic_free_area ();
+	return n;
+}
+
+int16_t basic_f_rnd (uint8_t **pos)
+{
+	static uint16_t reg;
+	uint16_t bit;
+	int16_t n, e;
+
+	n = expression (pos, B_CLOSEPAR, &e);
+	if (n != 0) reg = (uint16_t)n;
+	bit = (reg & 0001) ^
+			((reg & 0x0004) >> 2) ^
+			((reg & 0x0008) >> 3) ^
+			((reg & 0x0020) >> 5);
+	reg = (reg >> 1) | (bit << 15);
+	
+	return (int16_t)reg;
+}
+
+
+
 int16_t factor (uint8_t **pos)
 {
     int16_t n = 0, n1 = 0, e;
     uint8_t c;
 
     switch (**pos) {
+		default:
+			if (**pos >= B_F_PEEKW && **pos <= B_F_PRESS) {
+				// 関数の処理
+				c = **pos - B_F_PEEKW;
+				++*pos;
+				if (**pos == B_OPENPAR) {
+					++*pos;
+					n = _basic_func[c](pos);
+					_b_err = e;
+				}
+				else {
+					_b_err = B_ERR_SYNTAX_ERROR;
+				}
+			}
+			break;
         case B_OPENPAR:
             ++*pos;
             n = expression (pos, B_CLOSEPAR, &e);

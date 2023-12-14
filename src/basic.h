@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 enum {
     B_NEG = 0x81,   // ~
     B_NOT,          // !
@@ -100,7 +102,13 @@ enum {
 };
 
 enum {
+	B_MODE_STARTRUN = 1,
+	B_MODE_CONT,
+};
+
+enum {
     B_ERR_NO_ERROR = 0,
+    B_ERR_BREAK_IN,
     B_ERR_SYNTAX_ERROR,
     B_ERR_ILLEAGAL_FUNCTION_CALL,
     B_ERR_NEXT_WITHOUT_FOR,
@@ -127,6 +135,31 @@ struct __EditorBuffer {
         uint8_t    *readnext;   // READで次に読み込むデータの位置
 
 };
+
+int16_t basic_f_reserved (uint8_t **);	// ダミー関数
+
+int16_t basic_f_peekw (uint8_t **);      // 0xbe
+int16_t basic_f_peek (uint8_t **);
+int16_t basic_f_abs (uint8_t **);
+int16_t basic_f_rnd (uint8_t **);
+
+int16_t basic_f_free (uint8_t **);       // 0xc2
+int16_t basic_f_time (uint8_t **);       // 経過時間
+int16_t basic_f_year (uint8_t **);       // 年
+int16_t basic_f_month (uint8_t **);      // 月
+int16_t basic_f_day (uint8_t **);        // 日
+int16_t basic_f_hour (uint8_t **);       // 時
+int16_t basic_f_min (uint8_t **);        // 分
+int16_t basic_f_second (uint8_t **);     // 秒
+int16_t basic_f_adc (uint8_t **);        // a/d
+int16_t basic_f_temp (uint8_t **);       // 温度
+int16_t basic_f_hum (uint8_t **);        // 湿度
+int16_t basic_f_press (uint8_t **);      // 気圧
+
+
+
+
+
 
 
 

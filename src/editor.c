@@ -102,7 +102,7 @@ uint8_t *EditorBuffer_get_textarea (EditorBuffer *ed)
 void LineBuffer_console (LineBuffer *ln, EditorBuffer *ed)
 {
     uint8_t *text;
-    int16_t err, len;
+    int16_t err, len, mode;
 
     for (;;) {
         printf ("OK\n");
@@ -133,10 +133,16 @@ void LineBuffer_console (LineBuffer *ln, EditorBuffer *ed)
             }
             else {
                 err = basic (ed, ln->wordbuff);
-                if (err) EditorBuffer_show_error_message (ed, err);
-            }
-        }
-    }
+                if (err) {
+					EditorBuffer_show_error_message (ed, err);
+					if (err != B_ERR_BREAK_IN) {
+						// STOP 以外は実行を打ち切る
+						ed->currline = 0;
+					}
+				}
+			}
+		}
+	}
 }
 
 
@@ -255,6 +261,7 @@ void EditorBuffer_show_error_message (EditorBuffer *ed, int16_t err)
 {
     uint8_t *errmessage[] = {
         "No Error",
+        "Break",
         "Syntax Error",
         "Illeagal function call",
         "Next without for",

@@ -26,7 +26,7 @@ typedef struct {
 static STACK stack[STACKSIZE];
 static int stackpointer;
 
- void __dump (uint8_t *pos, int16_t bytes)
+void __dump (uint8_t *pos, int16_t bytes)
 {
     uint8_t *c;
 
@@ -105,6 +105,12 @@ exit_this:
     return t;
 }
 
+static EditorBuffer *inter_ed;
+int16_t _basic_free_area (void)
+{
+	return (int16_t)inter_ed->last;
+}
+
 /*
  * BASICインタープリタ本体
  * エラーコードを返す
@@ -116,18 +122,59 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
     int16_t e, f;
     uint16_t start, end;
     STACK *sp;
+    int dc;
 
-    ed->currtop = NULL; // 実行中の行の先頭
-    ed->currlen = 0;    // 実行中の行の長さ
-    ed->currline = 0;
+	static uint8_t tmpbuf[64], midtmp[32];	// INPUT用バッファ
+	
+	if (ed->currline == 0) {
+		// 実行環境の初期化
+		ed->currtop = NULL; // 実行中の行の先頭
+		ed->currlen = 0;    // 実行中の行の長さ
+		//~ ed->currline = 0;
+		stackpointer = -1;	// 要検討
+	}
 
-    stackpointer = -1;
+	inter_ed = ed;	// 外部からの参照用
+	
     //~ __dump (t, 64);
     while (*t != B_EOT) {
         switch (*t++) {
             default:
                 return B_ERR_SYNTAX_ERROR;
 
+			case B_INPUT:
+				if (ed->currtop == NULL) return B_ERR_ILLEAGAL_FUNCTION_CALL;
+				if (*t == B_STR) {
+					// show prompt
+					t++;
+					while (*t != B_STR && *t != B_TOL && *t != B_EOT) putchar (*t++);
+					if (*t != B_STR) return B_ERR_SYNTAX_ERROR;
+					t++;	
+				}
+				if (*t != B_COMMA) return B_ERR_SYNTAX_ERROR;
+				t++;
+				if (*t != B_VAR)   return B_ERR_SYNTAX_ERROR;
+				t++;
+				c = *t - 'A';
+				for (;;) {
+					fgets (tmpbuf, sizeof(tmpbuf)-1,stdin); 
+					tmp = tmpbuf;
+					n1 = str2mid (&tmp, midtmp, sizeof(midtmp));
+					if (n1 < 0) {
+						return B_ERR_SYNTAX_ERROR;
+					}
+					tmp = midtmp;
+					n = expression (&tmp, 0, &e);
+					if (e) {
+						printf ("??INPUT\n");
+					}
+					else {
+						_var[c] = n;
+						break;
+					}
+				}
+				break;
+				
             case B_REMARK:
                 if (ed->currtop != NULL) {
                     t = ed->currtop + ed->currlen;
@@ -166,16 +213,25 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
             case B_END:
                 return B_ERR_NO_ERROR;
 
-            case B_STOP:
-                return 0;
-
             case B_RUN:
                 t = EditorBuffer_get_textarea (ed);
                 ed->currtop = t;
                 ed->currline = *((int16_t*)(t+1));
                 ed->currlen = *(t+3);
                 continue;
-
+			
+			case B_STOP:
+				ed->breakpoint = t;
+				return B_ERR_BREAK_IN;
+				
+			case B_CONT:
+				if (ed->currline == 0) {
+					// break in 以外ではエラー
+					return B_ERR_ILLEAGAL_FUNCTION_CALL;
+				}
+				t = ed->breakpoint;
+				continue;
+				
             case B_RETURN:
                 if (stack_check ()) {
                     return B_ERR_RETURN_WITHOUT_GOSUB;
@@ -393,7 +449,9 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
                         continue;
                     }
                     pos = show_line (pos);
-                    getchar();
+					if (!(++dc & 7)) {
+						printf ("-- press enter key ---");getchar ();
+					}
                 }
                 break;
         }
