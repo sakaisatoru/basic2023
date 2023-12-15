@@ -156,6 +156,7 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
 				if (*t != B_VAR)   return B_ERR_SYNTAX_ERROR;
 				t++;
 				c = *t - 'A';
+				t++;
 				for (;;) {
 					fgets (tmpbuf, sizeof(tmpbuf)-1,stdin); 
 					tmp = tmpbuf;
