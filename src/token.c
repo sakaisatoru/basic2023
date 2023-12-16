@@ -307,6 +307,8 @@ uint8_t *show_line (uint8_t *pos)
 {
     uint8_t *s;
     uint16_t b;
+    int16_t onflag = 0;
+    
     while (*pos != B_EOT && *pos != B_TOL){
         switch (*pos++) {
             case B_HEXNUM:
@@ -351,6 +353,8 @@ uint8_t *show_line (uint8_t *pos)
                 putchar (*pos++);
                 break;
 
+			case B_ON:
+				onflag = 1;
             default:
                 pos--;
                 s = code2word (*pos, B_NEG,   basic_word);
@@ -358,6 +362,13 @@ uint8_t *show_line (uint8_t *pos)
                     // 見た目を整えるため特定のワードは直前に空白を挿入する
                     if (*pos == B_THEN || *pos == B_TO ||
                         *pos == B_OR || *pos == B_AND) putchar (' ');
+					if (onflag) {
+						if (*pos == B_GOTO || *pos == B_GOSUB ||
+							*pos == B_RESTORE) {
+							onflag = 0;
+							putchar (' ');
+						}
+					}
                     put_basic_word (s, __putch);
                     // ワードは後方に空白を挿入する
                     if (*pos >= B_OR) putchar (' ');

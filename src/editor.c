@@ -34,9 +34,6 @@ int16_t EditorBuffer_insert_and_replace (EditorBuffer *ed, LineBuffer *ln);
     ^                       ^
     source                  dest(source+len)  転送量 (int)(B_EOT - dest)+1)
 
-
-
-
 */
 
 struct __LineBuffer {
@@ -165,24 +162,32 @@ uint8_t *EditorBuffer_search_line (EditorBuffer *ed, uint16_t linenumber, uint8_
     pos = (p == NULL) ? ed->textarea : p;
 
     for (;;) {
-        if (*pos == B_EOT) {
-            *cdx = 1;
-            break;
-        }
-        pos++;
-        n = *((uint16_t*)pos);
-        if (n >= linenumber) {
-            pos--;
-            if (n > linenumber) {
-                *cdx = 1;
-            }
-            break;
-        }
-        pos++;
-        pos++;
-        n = (uint16_t)*pos;
-        pos += (n - 3);
+		switch (*pos) {
+			default:
+				pos++;
+				break;
+			case B_EOT:
+				*cdx = 1;
+				goto exit_this;		
+			case B_NUM: case B_HEXNUM: case B_BINNUM:
+				pos++;	pos++;	pos++;
+				break;
+			case B_TOL:
+				pos++;
+				n = *((uint16_t*)pos);
+				if (n >= linenumber) {
+					pos--;
+					if (n != linenumber) {
+						*cdx = 1;
+					}
+					goto exit_this;
+				}
+				n = (uint16_t)(pos[2]-1);
+				pos += n;
+				break;
+		}
     }
+exit_this:
     return pos;
 }
 
