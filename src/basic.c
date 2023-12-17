@@ -81,22 +81,22 @@ STACK *stack_pop (void)
 /*
  * 指定された中間コードを探す
  * *f = 1  行末（次行先頭）で打ち切る
- * 
+ *
  * 戻り
- * 	*f = 0	見つかった	!0 見つからない
+ *  *f = 0  見つかった   !0 見つからない
  */
 uint8_t *basic_search_word (uint8_t c, uint8_t *t, int16_t *f)
 {
     while (*t != c) {
         switch (*t) {
             case B_EOT:         // テキスト末端
-				*f = !0;
+                *f = !0;
                 goto exit_this;
             case B_TOL:         // 行番号 (４進める）
-				if (*f) {
-					*f != 0;
-					goto exit_this;
-				}
+                if (*f) {
+                    *f != 0;
+                    goto exit_this;
+                }
                 t++;
             case B_NUM:         // 数値 (３進める）
             case B_BINNUM:
@@ -109,7 +109,7 @@ uint8_t *basic_search_word (uint8_t c, uint8_t *t, int16_t *f)
                 break;
         }
     }
-	*f = 0;
+    *f = 0;
 exit_this:
     return t;
 }
@@ -117,41 +117,110 @@ exit_this:
 static EditorBuffer *inter_ed;
 int16_t _basic_free_area (void)
 {
-	return (int16_t)inter_ed->last;
+    return (int16_t)inter_ed->last;
 }
+
+int16_t basic_load_intelhex (EditorBuffer *ed)
+{
+    FILE *fp;
+    if ((fp = fopen ("file.bas", "rt")) == NULL) {
+        return B_ERR_IO_ERROR;
+    }
+
+    fclose (fp);
+    return B_ERR_NO_ERROR;
+}
+
+int16_t basic_save_intelhex (EditorBuffer *ed)
+{
+    uint8_t *pos;
+    uint16_t i, ad = 0, sum, len;
+    FILE *fp;
+
+    pos = ed->textarea;
+    len = sizeof(ed->textarea) - ed->last;
+    //~ printf ("ADDRESS : %04X  LEN : %02d\n", pos, len);
+
+    if ((fp = fopen ("file.bas", "wt")) == NULL) {
+        return B_ERR_IO_ERROR;
+    }
+
+    while (len > 0) {
+        fprintf (fp, ":");
+        //~ printf (":");
+        if (len < 16) {
+            // 最終データレコード
+            sum = len + (ad >> 8) + ad & 0xff;
+            fprintf (fp, "%02X%04X00", len, ad);
+            //~ printf ("%02X%04X00", len, ad);
+            //~ printf ("%02X %04X 00 ", len, ad);
+            while (len-- > 0) {
+                sum += *pos;
+                fprintf (fp, "%02X", *pos++);
+                //~ printf ("%02X", *pos++);
+                //~ printf ("%02X ", *pos++);
+            }
+            fprintf (fp, "%02X\n", 0xff & (0-sum));
+            //~ printf ("%02X\n", 0xff & (0-sum));
+            break;
+        }
+        else {
+            sum = 16 + ad >> 8 + ad & 0xff;
+            fprintf (fp, "10%04X00", ad);
+            //~ printf ("10%04X00", ad);
+            //~ printf ("10 %04X 00 ", ad);
+            for (i = 0; i < 16; i++) {
+                sum += *pos;
+                fprintf (fp, "%02X", *pos++);
+                //~ printf ("%02X", *pos++);
+                //~ printf ("%02X ", *pos++);
+            }
+            fprintf (fp, "%02X\n", 0xff & (0-sum));
+            //~ printf ("%02X\n", 0xff & (0-sum));
+            len -= 16;
+            ad += 16;
+        }
+    }
+    fprintf (fp, ":00000001FF\n");
+    //~ printf (":00000001FF\n");
+
+    fclose (fp);
+    return B_ERR_NO_ERROR;
+}
+
 
 /*
  * ON n GOSUB, GOTO, RESTORE用サブルーチン
  * n で指定された行番号を得る
  * 戻り
- * 	行番号列の最後
+ *  行番号列の最後
  *  linenum 該当する行番号、ない場合は0
  */
 static uint8_t *basic_skip_number (uint8_t *t, int16_t num, uint16_t *linenum)
 {
-	uint16_t n = 0;
-	int16_t f;
-	f = 1;
-	for (;;) {
-		if (num <= 0) {
-			t = basic_search_word (B_COLON, t, &f);
-			break;
-		}
-			
-		if (*t != B_NUM) {
-			break;
-		}
+    uint16_t n = 0;
+    int16_t f;
+    f = 1;
+    for (;;) {
+        if (num <= 0) {
+            t = basic_search_word (B_COLON, t, &f);
+            break;
+        }
 
-		num--;
-		t++;
-		if (num == 0) n = *((int16_t*)t);
-		t++;
-		t++;
-		if (*t != B_COMMA) break;
-		t++;
-	}
-	*linenum = n;
-	return t;	
+        if (*t != B_NUM) {
+            break;
+        }
+
+        num--;
+        t++;
+        if (num == 0) n = *((int16_t*)t);
+        t++;
+        t++;
+        if (*t != B_COMMA) break;
+        t++;
+    }
+    *linenum = n;
+    return t;
 }
 
 /*
@@ -164,66 +233,78 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
     int16_t n, n1, e, f, onflag, start, end;
     STACK *sp;
 
-	static uint8_t tmpbuf[64], midtmp[32];	// INPUT用バッファ
-	
-	if (ed->currline == 0) {
-		// 実行環境の初期化
-		ed->currtop = NULL; // 実行中の行の先頭
-		ed->currlen = 0;    // 実行中の行の長さ
-		//~ ed->currline = 0;
-		ed->readnext = NULL;// DATA	文の先頭
+    static uint8_t tmpbuf[64], midtmp[32];  // INPUT用バッファ
 
-		stackpointer = -1;	// 要検討
-		onflag		= 0;	// ON n GOTO,GOSUB,RESTORE用flag
-	}
+    if (ed->currline == 0) {
+        // 実行環境の初期化
+        ed->currtop = NULL; // 実行中の行の先頭
+        ed->currlen = 0;    // 実行中の行の長さ
+        //~ ed->currline = 0;
+        ed->readnext = NULL;// DATA 文の先頭
 
-	inter_ed = ed;	// 外部からの参照用
-	
+        stackpointer = -1;  // 要検討
+        onflag      = 0;    // ON n GOTO,GOSUB,RESTORE用flag
+    }
+
+    inter_ed = ed;  // 外部からの参照用
+
     //~ __dump (t, 64);
     while (*t != B_EOT) {
         switch (*t++) {
             default:
                 return B_ERR_SYNTAX_ERROR;
 
-			case B_ON:
-				onflag = expression (&t, 0, &e);
-				if (*t != B_GOSUB && 
-					*t != B_GOTO && *t != B_RESTORE) return B_ERR_SYNTAX_ERROR; 
-				continue;
-				
-			case B_INPUT:
-				if (ed->currtop == NULL) return B_ERR_ILLEAGAL_FUNCTION_CALL;
-				if (*t == B_STR) {
-					// show prompt
-					t++;
-					while (*t != B_STR && *t != B_TOL && *t != B_EOT) putchar (*t++);
-					if (*t != B_STR) return B_ERR_SYNTAX_ERROR;
-					t++;	
-				}
-				if (*t != B_COMMA) return B_ERR_SYNTAX_ERROR;
-				t++;
-				if (*t != B_VAR)   return B_ERR_SYNTAX_ERROR;
-				t++;
-				c = *t++ - 'A';
-				for (;;) {
-					fgets (tmpbuf, sizeof(tmpbuf)-1,stdin); 
-					tmp = tmpbuf;
-					n1 = str2mid (&tmp, midtmp, sizeof(midtmp));
-					if (n1 < 0) {
-						return B_ERR_SYNTAX_ERROR;
-					}
-					tmp = midtmp;
-					n = expression (&tmp, 0, &e);
-					if (e) {
-						printf ("??INPUT\n");
-					}
-					else {
-						_var[c] = n;
-						break;
-					}
-				}
-				continue;
-				
+            case B_LOAD:
+                if (ed->currtop != NULL) return B_ERR_ILLEAGAL_FUNCTION_CALL;
+                e = basic_load_intelhex (ed);
+                if (e) return e;
+                continue;
+
+            case B_SAVE:
+                if (ed->currtop != NULL) return B_ERR_ILLEAGAL_FUNCTION_CALL;
+                e = basic_save_intelhex (ed);
+                if (e) return e;
+                continue;
+
+            case B_ON:
+                onflag = expression (&t, 0, &e);
+                if (*t != B_GOSUB &&
+                    *t != B_GOTO && *t != B_RESTORE) return B_ERR_SYNTAX_ERROR;
+                continue;
+
+            case B_INPUT:
+                if (ed->currtop == NULL) return B_ERR_ILLEAGAL_FUNCTION_CALL;
+                if (*t == B_STR) {
+                    // show prompt
+                    t++;
+                    while (*t != B_STR && *t != B_TOL && *t != B_EOT) putchar (*t++);
+                    if (*t != B_STR) return B_ERR_SYNTAX_ERROR;
+                    t++;
+                }
+                if (*t != B_COMMA) return B_ERR_SYNTAX_ERROR;
+                t++;
+                if (*t != B_VAR)   return B_ERR_SYNTAX_ERROR;
+                t++;
+                c = *t++ - 'A';
+                for (;;) {
+                    fgets (tmpbuf, sizeof(tmpbuf)-1,stdin);
+                    tmp = tmpbuf;
+                    n1 = str2mid (&tmp, midtmp, sizeof(midtmp));
+                    if (n1 < 0) {
+                        return B_ERR_SYNTAX_ERROR;
+                    }
+                    tmp = midtmp;
+                    n = expression (&tmp, 0, &e);
+                    if (e) {
+                        printf ("??INPUT\n");
+                    }
+                    else {
+                        _var[c] = n;
+                        break;
+                    }
+                }
+                continue;
+
             case B_REMARK:
                 if (ed->currtop != NULL) {
                     t = ed->currtop + ed->currlen;
@@ -231,69 +312,69 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
                 }
                 return B_ERR_SYNTAX_ERROR;  // direct modeでのremarkはエラー
 
-			case B_DATA:
-				// 行末まで飛ばす
-				f = 1;
-				t = basic_search_word (B_COLON, t, &f);
-				continue;
-				
-			case B_RESTORE:
-				if (onflag) {
-					t = basic_skip_number (t, onflag, &n);
-					onflag = 0;
-					if (n == 0) continue;	// 該当する行番号がない
-				}
-				else {
-					if (*t != B_NUM) {
-						return B_ERR_SYNTAX_ERROR;
-					}
-					t++;
-					n = *((int16_t*)t);
-					t++;
-					t++;
-				}
+            case B_DATA:
+                // 行末まで飛ばす
+                f = 1;
+                t = basic_search_word (B_COLON, t, &f);
+                continue;
+
+            case B_RESTORE:
+                if (onflag) {
+                    t = basic_skip_number (t, onflag, &n);
+                    onflag = 0;
+                    if (n == 0) continue;   // 該当する行番号がない
+                }
+                else {
+                    if (*t != B_NUM) {
+                        return B_ERR_SYNTAX_ERROR;
+                    }
+                    t++;
+                    n = *((int16_t*)t);
+                    t++;
+                    t++;
+                }
                 jmp = EditorBuffer_search_line (ed, (uint16_t)n,
                                 ((ed->currline == 0)? NULL: /* direct mode */
                                 (ed->currline < n)? t : NULL), &f);
-				if (f) return B_ERR_UNDEFINED_LINE;
-				f = 0;
-				ed->readnext = basic_search_word (B_DATA, jmp, &f);
-				if (!f) {
-					ed->readnext++;
-				}
-				else {
-					ed->readnext = NULL;
-				}
-				continue;
-				
+                if (f) return B_ERR_UNDEFINED_LINE;
+                f = 0;
+                ed->readnext = basic_search_word (B_DATA, jmp, &f);
+                if (!f) {
+                    ed->readnext++;
+                }
+                else {
+                    ed->readnext = NULL;
+                }
+                continue;
+
             case B_READ:
-				t--;
-				do {
-					if (ed->readnext == NULL) return B_ERR_NO_DATA;
-					t++;
-					if (*t != B_VAR) return B_ERR_SYNTAX_ERROR;
-					t++;
-					c = (*t++ - 'A');
-					tmp = ed->readnext;
-					n = expression (&tmp, 0, &e);
-					if (e) return e;
-					if (*tmp == B_COMMA) {
-						tmp++;
-					}
-					else {
-						// 次のDATA文を探す
-						f = 0;
-						tmp = basic_search_word (B_DATA, tmp, &f);
-						if (!f) {
-							tmp++;
-						}
-						else {
-							tmp = NULL;
-						}
-					}
-					ed->readnext = tmp;
-					_var[c] = n;
-				} while (*t == B_COMMA);
+                t--;
+                do {
+                    if (ed->readnext == NULL) return B_ERR_NO_DATA;
+                    t++;
+                    if (*t != B_VAR) return B_ERR_SYNTAX_ERROR;
+                    t++;
+                    c = (*t++ - 'A');
+                    tmp = ed->readnext;
+                    n = expression (&tmp, 0, &e);
+                    if (e) return e;
+                    if (*tmp == B_COMMA) {
+                        tmp++;
+                    }
+                    else {
+                        // 次のDATA文を探す
+                        f = 0;
+                        tmp = basic_search_word (B_DATA, tmp, &f);
+                        if (!f) {
+                            tmp++;
+                        }
+                        else {
+                            tmp = NULL;
+                        }
+                    }
+                    ed->readnext = tmp;
+                    _var[c] = n;
+                } while (*t == B_COMMA);
                 continue;
 
             case B_NEW:
@@ -314,27 +395,27 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
                 ed->currline = *((int16_t*)(t+1));
                 ed->currlen = *(t+3);
                 f = 0;
-				ed->readnext = basic_search_word (B_DATA, ed->currtop, &f);
-				if (!f) {
-					ed->readnext++;
-				}
-				else {
-					ed->readnext = NULL;
-				}
+                ed->readnext = basic_search_word (B_DATA, ed->currtop, &f);
+                if (!f) {
+                    ed->readnext++;
+                }
+                else {
+                    ed->readnext = NULL;
+                }
                 continue;
-			
-			case B_STOP:
-				ed->breakpoint = t;
-				return B_ERR_BREAK_IN;
-				
-			case B_CONT:
-				if (ed->currline == 0) {
-					// break in 以外ではエラー
-					return B_ERR_ILLEAGAL_FUNCTION_CALL;
-				}
-				t = ed->breakpoint;
-				continue;
-				
+
+            case B_STOP:
+                ed->breakpoint = t;
+                return B_ERR_BREAK_IN;
+
+            case B_CONT:
+                if (ed->currline == 0) {
+                    // break in 以外ではエラー
+                    return B_ERR_ILLEAGAL_FUNCTION_CALL;
+                }
+                t = ed->breakpoint;
+                continue;
+
             case B_RETURN:
                 if (stack_check ()) {
                     return B_ERR_RETURN_WITHOUT_GOSUB;
@@ -352,24 +433,24 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
                     return B_ERR_STACK_OVER_FLOW;
                 }
                 if (onflag) {
-					t = basic_skip_number (t, onflag, &n);
-					onflag = 0;
-					if (n == 0) continue;	// 該当する行番号がない
-				}
-				else {
-					if (*t != B_NUM) {
-						return B_ERR_SYNTAX_ERROR;
-					}
-					t++;
-					n = *((int16_t*)t);
-					t++;
-					t++;
-				}
+                    t = basic_skip_number (t, onflag, &n);
+                    onflag = 0;
+                    if (n == 0) continue;   // 該当する行番号がない
+                }
+                else {
+                    if (*t != B_NUM) {
+                        return B_ERR_SYNTAX_ERROR;
+                    }
+                    t++;
+                    n = *((int16_t*)t);
+                    t++;
+                    t++;
+                }
                 jmp = EditorBuffer_search_line (ed, (uint16_t)n,
                                 ((ed->currline == 0)? NULL: /* direct mode */
                                 (ed->currline < n)? t : NULL), &f);
                 if (f == 1) {
-					__dump (t, 64);
+                    __dump (t, 64);
                     return B_ERR_UNDEFINED_LINE;
                 }
                 stack_push (STACK_TYPE_GOSUB, 0, 0, t);
@@ -378,19 +459,19 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
 
             case B_GOTO:
                 if (onflag) {
-					t = basic_skip_number (t, onflag, &n);
-					onflag = 0;
-					if (n == 0) continue; // 該当する行番号がない
-				}
-				else {
-					if (*t != B_NUM) {
-						return B_ERR_SYNTAX_ERROR;
-					}
-					t++;
-					n = *((int16_t*)t);
-					t++;
-					t++;
-				}
+                    t = basic_skip_number (t, onflag, &n);
+                    onflag = 0;
+                    if (n == 0) continue; // 該当する行番号がない
+                }
+                else {
+                    if (*t != B_NUM) {
+                        return B_ERR_SYNTAX_ERROR;
+                    }
+                    t++;
+                    n = *((int16_t*)t);
+                    t++;
+                    t++;
+                }
                 jmp = EditorBuffer_search_line (ed, (uint16_t)n,
                                 ((ed->currline == 0)? NULL: /* direct mode */
                                 (ed->currline < n)? t : NULL), &f);
@@ -555,7 +636,7 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
                     }
                 }
                 pos = EditorBuffer_search_line (ed, start, NULL, &f);
-				n = 0;
+                n = 0;
                 while (*pos != B_EOT) {
                     if (*pos == B_TOL) {
                         ++pos;
@@ -567,9 +648,9 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
                         continue;
                     }
                     pos = show_line (pos);
-					if (!(++n & 7)) {
-						printf ("-- press enter key ---");getchar ();
-					}
+                    if (!(++n & 7)) {
+                        printf ("-- press enter key ---");getchar ();
+                    }
                 }
                 continue;
         }

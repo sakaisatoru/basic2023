@@ -131,15 +131,15 @@ void LineBuffer_console (LineBuffer *ln, EditorBuffer *ed)
             else {
                 err = basic (ed, ln->wordbuff);
                 if (err) {
-					EditorBuffer_show_error_message (ed, err);
-					if (err != B_ERR_BREAK_IN) {
-						// STOP 以外は実行を打ち切る
-						ed->currline = 0;
-					}
-				}
-			}
-		}
-	}
+                    EditorBuffer_show_error_message (ed, err);
+                    if (err != B_ERR_BREAK_IN) {
+                        // STOP 以外は実行を打ち切る
+                        ed->currline = 0;
+                    }
+                }
+            }
+        }
+    }
 }
 
 
@@ -162,30 +162,30 @@ uint8_t *EditorBuffer_search_line (EditorBuffer *ed, uint16_t linenumber, uint8_
     pos = (p == NULL) ? ed->textarea : p;
 
     for (;;) {
-		switch (*pos) {
-			default:
-				pos++;
-				break;
-			case B_EOT:
-				*cdx = 1;
-				goto exit_this;		
-			case B_NUM: case B_HEXNUM: case B_BINNUM:
-				pos++;	pos++;	pos++;
-				break;
-			case B_TOL:
-				pos++;
-				n = *((uint16_t*)pos);
-				if (n >= linenumber) {
-					pos--;
-					if (n != linenumber) {
-						*cdx = 1;
-					}
-					goto exit_this;
-				}
-				n = (uint16_t)(pos[2]-1);
-				pos += n;
-				break;
-		}
+        switch (*pos) {
+            default:
+                pos++;
+                break;
+            case B_EOT:
+                *cdx = 1;
+                goto exit_this;
+            case B_NUM: case B_HEXNUM: case B_BINNUM:
+                pos++;  pos++;  pos++;
+                break;
+            case B_TOL:
+                pos++;
+                n = *((uint16_t*)pos);
+                if (n >= linenumber) {
+                    pos--;
+                    if (n != linenumber) {
+                        *cdx = 1;
+                    }
+                    goto exit_this;
+                }
+                n = (uint16_t)(pos[2]-1);
+                pos += n;
+                break;
+        }
     }
 exit_this:
     return pos;
@@ -276,6 +276,7 @@ void EditorBuffer_show_error_message (EditorBuffer *ed, int16_t err)
         "Undefined line",
         "Buffer over flow",
         "No DATA corresponding to READ",
+        "I/O Error",
 
         "Out of memory",
     };

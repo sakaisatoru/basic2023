@@ -102,8 +102,8 @@ enum {
 };
 
 enum {
-	B_MODE_STARTRUN = 1,
-	B_MODE_CONT,
+    B_MODE_STARTRUN = 1,
+    B_MODE_CONT,
 };
 
 enum {
@@ -118,6 +118,7 @@ enum {
     B_ERR_UNDEFINED_LINE,
     B_ERR_BUFFER_OVER_FLOW,
     B_ERR_NO_DATA,
+    B_ERR_IO_ERROR,
 
     B_ERR_BAD_ERROR_CODE
 };
@@ -136,7 +137,7 @@ struct __EditorBuffer {
 
 };
 
-int16_t basic_f_reserved (uint8_t **);	// ダミー関数
+int16_t basic_f_reserved (uint8_t **);  // ダミー関数
 
 int16_t basic_f_peekw (uint8_t **);      // 0xbe
 int16_t basic_f_peek (uint8_t **);
