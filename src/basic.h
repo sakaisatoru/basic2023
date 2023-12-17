@@ -129,6 +129,7 @@ struct __EditorBuffer {
         uint8_t    *eot;        // 末尾
         uint16_t    last;       // 残り容量
         uint8_t    *currtop;    // 実行中の行の先頭
+        uint8_t    *currpos;    // 実行中の行の語の位置
         uint8_t     currlen;    // 実行中の行の長さ
         int16_t     currline;   // 実行中の行番号
         int16_t     breakline;  // 現在の停止行

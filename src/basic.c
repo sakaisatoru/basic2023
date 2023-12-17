@@ -250,6 +250,7 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
 
     //~ __dump (t, 64);
     while (*t != B_EOT) {
+        ed->currpos = t;
         switch (*t++) {
             default:
                 return B_ERR_SYNTAX_ERROR;
@@ -268,6 +269,7 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
 
             case B_ON:
                 onflag = expression (&t, 0, &e);
+                if (onflag < 1) onflag = 1;
                 if (*t != B_GOSUB &&
                     *t != B_GOTO && *t != B_RESTORE) return B_ERR_SYNTAX_ERROR;
                 continue;
@@ -450,7 +452,7 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
                                 ((ed->currline == 0)? NULL: /* direct mode */
                                 (ed->currline < n)? t : NULL), &f);
                 if (f == 1) {
-                    __dump (t, 64);
+                    //~ __dump (t, 64);
                     return B_ERR_UNDEFINED_LINE;
                 }
                 stack_push (STACK_TYPE_GOSUB, 0, 0, t);

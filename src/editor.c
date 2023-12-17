@@ -237,23 +237,25 @@ int16_t EditorBuffer_insert_and_replace (EditorBuffer *ed, LineBuffer *ln)
     if (rv == 0) {
         // 置換
         // 既存行を削除する
-        l = *(dest + 3);
+        //~ printf ("debug : delete line\n");
+        //~ l = *(dest + 3);
+        l = (uint16_t)dest[3];
         source = dest + l;
         len = (uint16_t)(ed->eot - source);
         memmove (dest, source, len + 1);
         ed->last += l;
-        ed->eot -= len;
+        ed->eot -= l;
     }
 
     // 挿入
-    //~ memmove (dest + ln->wordlen +1, dest, ln->wordlen+1);
+    //~ printf ("debug : insert %X <- %X len:%d\n", dest + ln->wordlen +1, dest, (ed->eot - dest + 1));
     memmove (dest + ln->wordlen +1, dest, (ed->eot - dest + 1));
     ed->eot += (ln->wordlen +1);
     dest[0] = B_TOL;
     dest[1] = ln->wordbuff[1];
     dest[2] = ln->wordbuff[2];
     dest[3] = ln->wordlen + 1;
-    memmove (dest + 4, &ln->wordbuff[3], ln->wordlen - 3);
+    memmove (&dest[4], &ln->wordbuff[3], ln->wordlen - 3);
     ed->last -= (ln->wordlen+1);
 
     return 0;
@@ -289,6 +291,9 @@ void EditorBuffer_show_error_message (EditorBuffer *ed, int16_t err)
     }
     if (ed->currline != 0) {
         printf (" in %d\n", ed->currline);
+        if (ed->currpos != NULL) {
+            show_line (ed->currpos);
+        }
     }
     else {
         printf (".\n");
