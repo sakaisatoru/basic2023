@@ -123,6 +123,13 @@ enum {
     B_ERR_BAD_ERROR_CODE
 };
 
+struct __LineBuffer {
+        uint8_t     inputbuffer[256];   // 入力バッファ
+        uint8_t    *pos;
+        //~ int len;
+        uint8_t     wordbuff[128];      // 中間コード格納バッファ
+        uint8_t     wordlen;
+};
 
 struct __EditorBuffer {
         uint8_t     textarea[1024];
@@ -168,7 +175,7 @@ int16_t basic_f_press (uint8_t **);      // 気圧
 typedef struct __LineBuffer     LineBuffer;
 typedef struct __EditorBuffer   EditorBuffer;
 
-int16_t       basic (EditorBuffer *ed, uint8_t *t);
+int16_t       basic (EditorBuffer *ed, LineBuffer *ln);
 int16_t       expression (uint8_t **pos, uint8_t endcode, int16_t *e);
 void          __dump (uint8_t *pos, int16_t bytes);
 

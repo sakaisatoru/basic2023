@@ -36,6 +36,8 @@ int16_t EditorBuffer_insert_and_replace (EditorBuffer *ed, LineBuffer *ln);
 
 */
 
+
+#if 0
 struct __LineBuffer {
         uint8_t     inputbuffer[256];   // 入力バッファ
         uint8_t    *pos;
@@ -43,7 +45,7 @@ struct __LineBuffer {
         uint8_t     wordbuff[128];      // 中間コード格納バッファ
         uint8_t     wordlen;
 };
-#if 0
+
 struct __EditorBuffer {
         uint8_t     textarea[1024];
         uint8_t    *eot;        // 末尾
@@ -129,7 +131,7 @@ void LineBuffer_console (LineBuffer *ln, EditorBuffer *ed)
                 }
             }
             else {
-                err = basic (ed, ln->wordbuff);
+                err = basic (ed, ln);
                 if (err) {
                     EditorBuffer_show_error_message (ed, err);
                     if (err != B_ERR_BREAK_IN) {

@@ -227,14 +227,15 @@ static uint8_t *basic_skip_number (uint8_t *t, int16_t num, uint16_t *linenum)
  * BASICインタープリタ本体
  * エラーコードを返す
  */
-int16_t basic (EditorBuffer *ed, uint8_t *t)
+int16_t basic (EditorBuffer *ed, LineBuffer *ln)
 {
-    uint8_t *pos, c, *jmp, *tmp;
+    uint8_t *pos, c, *jmp, *tmp, *t;
     int16_t n, n1, e, f, onflag, start, end;
     STACK *sp;
 
     static uint8_t tmpbuf[64], midtmp[32];  // INPUT用バッファ
-
+	
+	t = ln->wordbuff;
     if (ed->currline == 0) {
         // 実行環境の初期化
         ed->currtop = NULL; // 実行中の行の先頭
@@ -289,13 +290,14 @@ int16_t basic (EditorBuffer *ed, uint8_t *t)
                 t++;
                 c = *t++ - 'A';
                 for (;;) {
-                    fgets (tmpbuf, sizeof(tmpbuf)-1,stdin);
-                    tmp = tmpbuf;
-                    n1 = str2mid (&tmp, midtmp, sizeof(midtmp));
+                    //~ fgets (tmpbuf, sizeof(tmpbuf)-1,stdin);
+                    fgets (ln->inputbuffer, sizeof(ln->inputbuffer)-1,stdin);
+                    tmp = ln->inputbuffer;
+                    n1 = str2mid (&tmp, ln->wordbuff, sizeof(ln->wordbuff));
                     if (n1 < 0) {
                         return B_ERR_SYNTAX_ERROR;
                     }
-                    tmp = midtmp;
+                    tmp = ln->wordbuff;
                     n = expression (&tmp, 0, &e);
                     if (e) {
                         printf ("??INPUT\n");
