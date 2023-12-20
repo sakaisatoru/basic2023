@@ -316,36 +316,55 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
 
             case B_INPUT:
                 if (ed->currtop == NULL) return B_ERR_ILLEAGAL_FUNCTION_CALL;
-                if (*t == B_STR) {
-                    // show prompt
-                    t++;
-                    while (*t != B_STR && *t != B_TOL && *t != B_EOT) putchar (*t++);
-                    if (*t != B_STR) return B_ERR_SYNTAX_ERROR;
-                    t++;
-                }
-                if (*t != B_COMMA) return B_ERR_SYNTAX_ERROR;
-                t++;
-                if (*t != B_VAR)   return B_ERR_SYNTAX_ERROR;
-                t++;
-                c = *t++ - 'A';
-                for (;;) {
-                    //~ fgets (tmpbuf, sizeof(tmpbuf)-1,stdin);
-                    fgets (ln->inputbuffer, sizeof(ln->inputbuffer)-1,stdin);
-                    tmp = ln->inputbuffer;
-                    n1 = str2mid (&tmp, ln->wordbuff, sizeof(ln->wordbuff));
-                    if (n1 < 0) {
-                        return B_ERR_SYNTAX_ERROR;
-                    }
-                    tmp = ln->wordbuff;
-                    n = expression (&tmp, 0, &e);
-                    if (e) {
-                        printf ("??INPUT\n");
-                    }
-                    else {
-                        _var[c] = n;
-                        break;
-                    }
-                }
+				t--;
+                do {
+					t++;
+					// プロンプトの表示
+					if (*t == B_STR) {
+						t++;
+						while (*t != B_STR && *t != B_TOL && *t != B_EOT) putchar (*t++);
+						if (*t != B_STR) return B_ERR_SYNTAX_ERROR;
+						t++;
+						if (*t != B_COMMA) return B_ERR_SYNTAX_ERROR;
+						t++;
+					}
+					// 入力まち
+					for (;;) {
+						fgets (ln->inputbuffer, sizeof(ln->inputbuffer)-1,stdin);
+						tmp = ln->inputbuffer;
+						n1 = str2mid (&tmp, ln->wordbuff, sizeof(ln->wordbuff));
+						if (n1 < 0) {
+							return B_ERR_SYNTAX_ERROR;
+						}
+						tmp = ln->wordbuff;
+						n = expression (&tmp, 0, &e);
+						if (e) {
+							printf ("??INPUT\n");
+						}
+						else {
+							break;
+						}
+					}
+
+					if (*t == B_VAR) {
+						t++;
+						c = *t++ - 'A';
+						_var[c] = n;
+					}
+					else if (*t == B_ARRAY) {
+							t++;
+							c = *t++;
+							n1 = expression (&t, B_CLOSEPAR, &e);    // 添字の処理
+							if (e) return e;
+
+							int16_t *p = expression_array_search (c,n1,&e);
+							if (e) return e;
+							*p = n;
+					}
+					else {
+						return B_ERR_SYNTAX_ERROR;
+					}
+				} while (*t == B_COMMA);
                 continue;
 
             case B_REMARK:
@@ -394,10 +413,7 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                 t--;
                 do {
                     if (ed->readnext == NULL) return B_ERR_NO_DATA;
-                    t++;
-                    if (*t != B_VAR) return B_ERR_SYNTAX_ERROR;
-                    t++;
-                    c = (*t++ - 'A');
+                    
                     tmp = ed->readnext;
                     n = expression (&tmp, 0, &e);
                     if (e) return e;
@@ -416,7 +432,26 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                         }
                     }
                     ed->readnext = tmp;
-                    _var[c] = n;
+
+                    t++;
+                    if (*t == B_VAR) {
+						t++;
+						c = (*t++ - 'A');
+						_var[c] = n;
+					}
+					else if (*t == B_ARRAY) {
+						t++;
+						c = *t++;
+						n1 = expression (&t, B_CLOSEPAR, &e);    // 添字の処理
+						if (e) return e;
+
+						int16_t *p = expression_array_search (c,n1,&e);
+						if (e) return e;
+						*p = n;
+					}
+					else {
+						return B_ERR_SYNTAX_ERROR;
+					}
                 } while (*t == B_COMMA);
                 continue;
 
@@ -643,7 +678,6 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                     int16_t *p = expression_array_search (c,n,&e);
                     if (e) return e;
                     *p = n1;
-                    continue;
                 }
 
                 continue;
