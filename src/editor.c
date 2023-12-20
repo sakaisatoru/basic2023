@@ -103,6 +103,7 @@ void LineBuffer_console (LineBuffer *ln, EditorBuffer *ed)
     uint8_t *text;
     int16_t err, len, mode;
 
+	expression_array_init ();
     for (;;) {
         printf ("OK\n");
         fgets (ln->inputbuffer, sizeof(ln->inputbuffer)-1, stdin);
@@ -134,9 +135,10 @@ void LineBuffer_console (LineBuffer *ln, EditorBuffer *ed)
                 err = basic (ed, ln);
                 if (err) {
                     EditorBuffer_show_error_message (ed, err);
+					ed->currline = 0;
                     if (err != B_ERR_BREAK_IN) {
                         // STOP 以外は実行を打ち切る
-                        ed->currline = 0;
+                        ed->currtop = NULL;
                     }
                 }
             }
@@ -269,9 +271,9 @@ int16_t EditorBuffer_insert_and_replace (EditorBuffer *ed, LineBuffer *ln)
 void EditorBuffer_show_error_message (EditorBuffer *ed, int16_t err)
 {
     uint8_t *errmessage[] = {
-        "No Error",
+        "No error",
         "Break",
-        "Syntax Error",
+        "Syntax error",
         "Illeagal function call",
         "Next without for",
         "Return without gosub",
@@ -280,7 +282,10 @@ void EditorBuffer_show_error_message (EditorBuffer *ed, int16_t err)
         "Undefined line",
         "Buffer over flow",
         "No DATA corresponding to READ",
-        "I/O Error",
+        "I/O error",
+        "Undefined Variable",
+        "Index error",
+        "Duplicate define symbol",
 
         "Out of memory",
     };
@@ -293,11 +298,12 @@ void EditorBuffer_show_error_message (EditorBuffer *ed, int16_t err)
     }
     if (ed->currline != 0) {
         printf (" in %d\n", ed->currline);
-        if (ed->currpos != NULL) {
-            show_line (ed->currpos);
-        }
-    }
+	}
     else {
         printf (".\n");
     }
+   	if (ed->breakpoint == NULL && ed->currpos != NULL) {
+		show_line (ed->currpos);
+	}
+
 }

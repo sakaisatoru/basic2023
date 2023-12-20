@@ -95,7 +95,7 @@ enum {
     B_HEXNUM,       // 内部コード 16進
     B_BINNUM,       // 内部コード 2進     0xd0
     B_VAR,          // 内部コード 変数
-
+	
                     //0xd2
     B_EOT,          // end of text
     B_TOL,          // top of line
@@ -119,6 +119,9 @@ enum {
     B_ERR_BUFFER_OVER_FLOW,
     B_ERR_NO_DATA,
     B_ERR_IO_ERROR,
+    B_ERR_UNDEFINED_VARIABLE,
+    B_ERR_INDEX_ERROR,
+    B_ERR_DUPLICATE,
 
     B_ERR_BAD_ERROR_CODE
 };
@@ -189,3 +192,8 @@ EditorBuffer *EditorBuffer_new (void);
 uint8_t      *EditorBuffer_get_textarea (EditorBuffer *ed);
 uint8_t      *EditorBuffer_search_line (EditorBuffer *ed, uint16_t linenumber, uint8_t *pos, int16_t *cdx);
 void          EditorBuffer_start_message (EditorBuffer *ed);
+
+void 		  expression_array_init (void);
+int16_t expression_array_setup (EditorBuffer *ed, uint8_t var, int16_t arraysize);
+int16_t *expression_array_search (uint8_t var, int16_t index, int16_t *e);
+

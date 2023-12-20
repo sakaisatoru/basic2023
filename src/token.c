@@ -295,7 +295,16 @@ uint8_t token (uint8_t **text)
         // 未定義だった
         *text = subtext;
         subtext++;
-        n = (!(*subtext >= 'A' && *subtext <= 'Z')) ? B_VAR : 0;
+        if (*subtext == '(') {
+			n = B_ARRAY;
+			text++;	// 配列変数の'('は中間コードとして記録しないので飛ばす
+		}
+		else if (!(*subtext >= 'A' && *subtext <= 'Z')) {
+			n = B_VAR;
+		}
+		else {
+			n = 0;
+		}
     }
     return n;
 }
@@ -351,6 +360,11 @@ uint8_t *show_line (uint8_t *pos)
 
             case B_VAR:
                 putchar (*pos++);
+                break;
+
+            case B_ARRAY:
+                putchar (*pos++);
+                putchar ('(');
                 break;
 
 			case B_ON:
@@ -416,7 +430,13 @@ int16_t str2mid (uint8_t **text, uint8_t *buff, int16_t buffsize)
                 *pos++ = **text;
                 ++*text;
                 break;
-
+			
+			case B_ARRAY:
+				*pos++ = **text;
+                ++*text;	// '('を飛ばす
+                ++*text;
+				break;
+				
             case B_NUM:
             case B_HEXNUM:
             case B_BINNUM:

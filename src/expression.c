@@ -76,14 +76,129 @@ int16_t basic_f_rnd (uint8_t **pos)
 	return (int16_t)reg;
 }
 
+// 配列変数処理変更中
+
+/*
+ * 配列変数
+ * １次元のみ。２次元以上は添字の事前計算で代用する。
+ * 
+ * 中間コード								uint8_t
+ * 変数名							v	uint8_t (アルファベット１文字）
+ * 添字最大値							l   int16_t
+ * 実際のデータ（固定長
+ */
+static uint8_t *array_top;	// 配列変数格納域先頭
+static uint8_t *array_next;	// 配列変数次回格納域先頭
+void expression_array_init (void)
+{
+	array_top = NULL;
+	array_next = NULL;
+}
+ 
+int16_t expression_array_setup (EditorBuffer *ed, uint8_t var, int16_t arraysize)
+{
+	int16_t i;
+	
+	if (array_top == NULL) {
+		array_top = ed->eot;
+		array_top++;	// ソースコードの直後に配置する
+		array_next = array_top;
+	}
+	// ヘッダ 4, 末尾に1 計5
+	if (ed->last <= (arraysize * sizeof(int16_t) +5)) return B_ERR_OUT_OF_MEMORY;
+	
+	while (*array_next == B_ARRAY) {
+		array_next++;	array_next++;
+		i = *((int16_t*)array_next);
+		array_next++;array_next++;
+		array_next += i*sizeof(int16_t);
+	}
+
+	*array_next++ = B_ARRAY;
+	*array_next++ = var;
+	*((int16_t*)array_next) = arraysize;
+	array_next += (2 + arraysize * sizeof(int16_t));
+	*array_next = '\0';
+	ed->last -= (4 + arraysize * sizeof(int16_t));
+	return B_ERR_NO_ERROR;
+}
+
+/*
+ * 配列変数名と添字から実際の格納ポインタを返す
+ * 添字が溢れていたり、配列が未定義の場合は *e にエラーコードを入れて
+ * NULL を返す。
+ */
+int16_t *expression_array_search (uint8_t var, int16_t index, int16_t *e)
+{
+	uint8_t *pos;
+	int16_t i;
+
+	printf ("var = %c, index = %d\n", var, index);
+
+	if (array_top != NULL) {
+		pos = array_top;
+		pos++;
+		while (*pos == B_ARRAY) {
+			i = *((int16_t*)&pos[2]);
+			if (index < 0) index += i;	// 添字が負数の場合は末端から参照する
+			if (pos[1] == var) {
+				if (index >= 0 && index < i) {
+					pos += 4;
+					pos += (sizeof(int16_t) * index);
+					*e = B_ERR_NO_ERROR;
+					return (int16_t*)pos;
+				}
+				else {
+					*e = B_ERR_INDEX_ERROR;
+					return NULL;
+				}
+			}
+			else {
+				pos += 4;
+				pos += sizeof(int16_t) * index;
+			}
+		}
+	}
+	*e = B_ERR_UNDEFINED_VARIABLE;
+	return NULL;
+}
+
+
+
+
+
+
+
+
+
+
+
 
 
 int16_t factor (uint8_t **pos)
 {
-    int16_t n = 0, n1 = 0, e;
+    int16_t n = 0, n1 = 0, e, *v;
     uint8_t c;
 
     switch (**pos) {
+		case B_ARRAY:
+			++*pos;
+			c = **pos;	// 変数名
+			++*pos;
+			n = expression (pos, B_CLOSEPAR, &e);
+			if (e) {
+				_b_err = e;
+				break;
+			}
+			
+			v = expression_array_search (c, n, &e);
+			if (v == NULL) {
+				_b_err = e;
+				break;
+			}
+			n = *v;
+			break;
+			
 		default:
 			if (**pos >= B_F_PEEKW && **pos <= B_F_PRESS) {
 				// 関数の処理
@@ -99,11 +214,13 @@ int16_t factor (uint8_t **pos)
 				}
 			}
 			break;
+
         case B_OPENPAR:
             ++*pos;
             n = expression (pos, B_CLOSEPAR, &e);
             _b_err = e;
             break;
+
         case B_VAR:
             ++*pos;
             c = **pos - 'A';
@@ -350,16 +467,19 @@ int16_t expression (uint8_t **pos, uint8_t endcode, int16_t *e)
     }
 
     if (**pos != endcode) {
-        switch (**pos) {
-            case B_COLON:
-            case B_SEMICOLON:
-            case B_COMMA:
-            case B_TOL:
-            case B_EOT:
-                return n;
-        }
-        //~ printf ("%0X", **pos);
-        *e = B_ERR_SYNTAX_ERROR;        // Error exit
+        if (endcode != B_CLOSEPAR) {
+			// 終端に閉じカッコが要求されていない場合は、区切り子でも
+			// 正常終了とする
+			switch (**pos) {
+				case B_COLON:
+				case B_SEMICOLON:
+				case B_COMMA:
+				case B_TOL:
+				case B_EOT:
+					return n;
+			}
+		}
+        *e = B_ERR_SYNTAX_ERROR;
         return n;
     }
     ++*pos;
