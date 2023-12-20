@@ -284,6 +284,7 @@ void EditorBuffer_show_error_message (EditorBuffer *ed, int16_t err)
         "Undefined Variable",
         "Index error",
         "Duplicate define symbol",
+        "Divide by zero",
 
         "Out of memory",
     };

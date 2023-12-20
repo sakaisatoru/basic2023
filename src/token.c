@@ -446,10 +446,10 @@ int16_t str2mid (uint8_t **text, uint8_t *buff, int16_t buffsize)
                 break;
 
             case B_STR:
-                do {
+                while (**text != '\"') {
                     *pos++ = **text;
                     ++*text;
-                }while (**text != '\"');
+                }
                 *pos++ = B_STR;
                 ++*text;
                 break;

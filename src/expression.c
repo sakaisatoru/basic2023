@@ -76,8 +76,15 @@ int16_t basic_f_rnd (uint8_t **pos, int16_t *e)
             ((_rnd_reg & 0x0020) >> 5);
     _rnd_reg = (_rnd_reg >> 1) | (bit << 15);
 
+	if (n == 0) {
+		e0 = B_ERR_DIVIDE_BY_ZERO;
+		n = 0;
+	}
+	else {
+		n = (int16_t)(_rnd_reg % n);
+	}
     *e = e0;
-    return (int16_t)(_rnd_reg % n);
+    return n;
 }
 
 /*
@@ -289,10 +296,20 @@ int16_t term6 (uint8_t **pos)
                 n *= n1;
                 break;
             case B_DIV:
-                n /= n1;
+				if (n1 == 0) {
+					_b_err = B_ERR_DIVIDE_BY_ZERO;
+				}
+				else {
+					n /= n1;
+                }
                 break;
             case B_MOD:
-                n %= n1;
+				if (n1 == 0) {
+					_b_err = B_ERR_DIVIDE_BY_ZERO;
+				}
+				else {
+					n %= n1;
+                }
                 break;
             default:
                 break;
