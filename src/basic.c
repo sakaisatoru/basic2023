@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <string.h>
 #include "basic.h"
 
 
@@ -222,76 +223,6 @@ static uint8_t *basic_skip_number (uint8_t *t, int16_t num, uint16_t *linenum)
     *linenum = n;
     return t;
 }
-#if 0
-/*
- * 配列変数
- * １次元のみ。２次元以上は添字の事前計算で代用する。
- * 
- * 中間コード					  B_ARRAY	uint8_t
- * 変数名							v	uint8_t (アルファベット１文字）
- * 添字最大値							l   int16_t
- * 実際のデータ（固定長
- */
-int16_t basic_array_setup (EditorBuffer *ed, uint8_t var, int16_t arraysize)
-{
-	int16_t i, e;
-	uint8_t *pos;
-	// ヘッダ 4, 末尾に1 計5
-	if (ed->last <= (arraysize * sizeof(int16_t) +5)) return B_ERR_OUT_OF_MEMORY;
-	pos = ed->eot;
-	pos++;
-	while (*pos == B_ARRAY) {
-		pos++;	pos++;
-		i = *((int16_t*)pos);
-		pos++;pos++;
-		pos += i*sizeof(int16_t);
-	}
-	*pos++ = B_ARRAY;
-	*pos++ = var;
-	*((int16_t*)pos) = arraysize;
-	pos++;pos++;
-	pos += arraysize * sizeof(int16_t);
-	*pos = '\0';
-	ed->last -= (4 + arraysize * sizeof(int16_t));
-	return B_ERR_NO_ERROR;
-}
-
-/*
- * 配列変数名と添字から実際の格納ポインタを返す
- * 添字が溢れていたり、配列が未定義の場合は *e にエラーコードを入れて
- * NULL を返す。
- */
-int16_t *basic_array_search (EditorBuffer *ed, uint8_t var, int16_t index, int16_t *e)
-{
-	uint8_t *pos;
-	int16_t i;
-
-	pos = ed->eot;
-	pos++;
-	while (*pos == B_ARRAY) {
-		i = *((int16_t*)&pos[2]);
-		if (index < 0) index += i;	// 添字が負数の場合は末端から参照する
-		if (pos[1] == var) {
-			if (index >= 0 && index < i) {
-				pos += 4;
-				pos += sizeof(int16_t) * index;
-				*e = B_ERR_NO_ERROR;
-				return (int16_t*)pos;
-			}
-			else {
-				*e = B_ERR_INDEX_ERROR;
-				return NULL;
-			}
-		}
-		else {
-			pos += 4;
-			pos += sizeof(int16_t) * index;
-		}
-	}
-	*e = B_ERR_UNDEFINED_VARIABLE;
-	return NULL;
-}
-#endif
 
 /*
  * BASICインタープリタ本体
@@ -303,16 +234,16 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
     int16_t n, n1, e, f, onflag, start, end;
     STACK *sp;
 
-    static uint8_t tmpbuf[64], midtmp[32];  // INPUT用バッファ
-	
-	t = ln->wordbuff;
+    //~ static uint8_t tmpbuf[64], midtmp[32];  // INPUT用バッファ
+
+    t = ln->wordbuff;
     if (ed->currtop == NULL) {
         // 実行環境の初期化
         ed->currlen = 0;    // 実行中の行の長さ
-        ed->currline = 0;	// 実行中の行番号
-		ed->currpos = NULL;
+        ed->currline = 0;   // 実行中の行番号
+        ed->currpos = NULL;
         ed->readnext = NULL;// DATA 文の先頭
-		ed->breakpoint = NULL;
+        ed->breakpoint = NULL;
         stackpointer = -1;  // 要検討
         onflag      = 0;    // ON n GOTO,GOSUB,RESTORE用(n値,flag兼用)
     }
@@ -323,33 +254,47 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
     while (*t != B_EOT) {
         if (ed->currtop != NULL) ed->currpos = t;
         switch (*t++) {
-			case B_CALL:
+            case B_CALL:
+            case B_POKEW:
+            case B_POKE:
             default:
                 return B_ERR_SYNTAX_ERROR;
 
-			case B_DIM:
-				if (t[0] == B_ARRAY) {
-					c = t[1];	// 変数名
-					t++; t++;
-					n = expression (&t, B_CLOSEPAR, &e);
-					if (e) return e;
-					e = expression_array_setup (ed, c, n);
-					if (e) return e;
-				}
-				continue;
+            case B_DIM:
+                if (t[0] == B_ARRAY) {
+                    c = t[1];   // 変数名
+                    t++; t++;
+                    n = expression (&t, B_CLOSEPAR, &e);
+                    if (e) return e;
+                    e = expression_array_setup (ed, c, n);
+                    if (e) return e;
+                }
+                continue;
 
-			case B_CLEAR:
-				n = expression (&t, 0, &e);
-				if (e) return e;
-				if (n == 1) {
-					// すべての単純変数を0にする
-					memset (_var, 0, sizeof(_var));
-				}
-				else {
-					return B_ERR_ILLEAGAL_FUNCTION_CALL;
-				}
-				continue;
-				
+            case B_CLEAR:
+                n = expression (&t, 0, &e);
+                if (e) return e;
+                switch (n) {
+                    default:
+                        // 全ての変数を初期化する
+                        memset (_var, 0, sizeof(_var));
+                    case 2:
+                        // 配列変数を消去する
+                        //~ printf ("%p  %p\n", ed->eot, &ed->textarea[sizeof(ed->textarea)-1]);
+                        if (ed->eot < &ed->textarea[sizeof(ed->textarea)-1]) {
+                            tmp = ed->eot;
+                            tmp++;
+                            *tmp = '\0';
+                            ed->last = (uint16_t)(&(ed->textarea[sizeof(ed->textarea)-1]) - ed->eot);
+                        }
+                        break;
+                    case 1:
+                        // 単純変数のみ初期化する
+                        memset (_var, 0, sizeof(_var));
+                        break;
+                }
+                continue;
+
             case B_LOAD:
                 if (ed->currtop != NULL) return B_ERR_ILLEAGAL_FUNCTION_CALL;
                 e = basic_load_intelhex (ed);
@@ -480,16 +425,17 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                     // 実行中に呼び出された
                     return B_ERR_ILLEAGAL_FUNCTION_CALL;
                 }
-                EditorBuffer_new ();	// init の代用
+                EditorBuffer_new ();    // init の代用
                 stackpointer = -1;
+                expression_array_init ();
                 return B_ERR_NO_ERROR;
 
             case B_END:
-				ed->currtop = NULL;
+                ed->currtop = NULL;
                 return B_ERR_NO_ERROR;
 
             case B_RUN:
-                t = EditorBuffer_get_textarea (ed);
+                t = ed->textarea;
                 ed->currtop = t;
                 ed->currline = *((int16_t*)(t+1));
                 ed->currlen = *(t+3);
@@ -504,14 +450,14 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                 continue;
 
             case B_STOP:
-				if (ed->breakpoint != NULL) {
-					// すでにstop文を実行してダイレクトモードに
-					// 抜けている場合はエラー
-					return B_ERR_ILLEAGAL_FUNCTION_CALL;
-				}
+                if (ed->breakpoint != NULL) {
+                    // すでにstop文を実行してダイレクトモードに
+                    // 抜けている場合はエラー
+                    return B_ERR_ILLEAGAL_FUNCTION_CALL;
+                }
                 ed->breakpoint = t;
                 ed->breakline = ed->currline;
-				//~ ed->currtop = NULL;	// ダイレクトモードに遷移
+                //~ ed->currtop = NULL; // ダイレクトモードに遷移
                 return B_ERR_BREAK_IN;
 
             case B_CONT:
@@ -685,11 +631,11 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                 if (e) return e;
                 continue;
 
-			case B_ARRAY:
+            case B_ARRAY:
                 c = *t++;
-				n = expression (&t, B_CLOSEPAR, &e);	// 添字の処理
-				if (e) return e;
-				
+                n = expression (&t, B_CLOSEPAR, &e);    // 添字の処理
+                if (e) return e;
+
                 if (*t == B_EQ2) {
                     t++;
                     n1 = expression (&t, 0, &e);
@@ -699,8 +645,8 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                     *p = n1;
                     continue;
                 }
-				
-				continue;
+
+                continue;
 
             case B_COLON:
             case B_SEMICOLON:

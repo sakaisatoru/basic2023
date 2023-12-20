@@ -80,7 +80,8 @@ EditorBuffer *EditorBuffer_new (void)
 {
     editorbuf.last = sizeof(editorbuf.textarea) - 1;
     editorbuf.eot = editorbuf.textarea;
-    *editorbuf.eot = B_EOT;
+    editorbuf.eot[0] = B_EOT;
+    editorbuf.eot[1] = '\0';    // 配列の初期化（暫定）
     editorbuf.currtop = NULL;   // 実行中の行の先頭
     editorbuf.currlen = 0;      // 実行中の行の長さ
     editorbuf.currline = 0;     // 実行中の行番号
@@ -90,10 +91,7 @@ EditorBuffer *EditorBuffer_new (void)
     return &editorbuf;
 }
 
-uint8_t *EditorBuffer_get_textarea (EditorBuffer *ed)
-{
-    return ed->textarea;
-}
+
 
 /*
  * １行分の入力を受付け、中間コードに変換する
@@ -103,7 +101,7 @@ void LineBuffer_console (LineBuffer *ln, EditorBuffer *ed)
     uint8_t *text;
     int16_t err, len, mode;
 
-	expression_array_init ();
+    expression_array_init ();
     for (;;) {
         printf ("OK\n");
         fgets (ln->inputbuffer, sizeof(ln->inputbuffer)-1, stdin);
@@ -135,11 +133,11 @@ void LineBuffer_console (LineBuffer *ln, EditorBuffer *ed)
                 err = basic (ed, ln);
                 if (err) {
                     EditorBuffer_show_error_message (ed, err);
-					ed->currline = 0;
-                    if (err != B_ERR_BREAK_IN) {
-                        // STOP 以外は実行を打ち切る
-                        ed->currtop = NULL;
-                    }
+                    ed->currline = 0;
+                }
+                if (err != B_ERR_BREAK_IN) {
+                    // STOP 以外は正常終了も含めて実行終了とする
+                    ed->currtop = NULL;
                 }
             }
         }
@@ -298,12 +296,12 @@ void EditorBuffer_show_error_message (EditorBuffer *ed, int16_t err)
     }
     if (ed->currline != 0) {
         printf (" in %d\n", ed->currline);
-	}
+    }
     else {
         printf (".\n");
     }
-   	if (ed->breakpoint == NULL && ed->currpos != NULL) {
-		show_line (ed->currpos);
-	}
+    if (ed->breakpoint == NULL && ed->currpos != NULL) {
+        show_line (ed->currpos);
+    }
 
 }

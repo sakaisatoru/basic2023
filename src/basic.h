@@ -95,7 +95,7 @@ enum {
     B_HEXNUM,       // 内部コード 16進
     B_BINNUM,       // 内部コード 2進     0xd0
     B_VAR,          // 内部コード 変数
-	
+
                     //0xd2
     B_EOT,          // end of text
     B_TOL,          // top of line
@@ -148,25 +148,25 @@ struct __EditorBuffer {
 
 };
 
-int16_t basic_f_reserved (uint8_t **);  // ダミー関数
+int16_t basic_f_reserved (uint8_t **, int16_t *);   // ダミー関数
 
-int16_t basic_f_peekw (uint8_t **);      // 0xbe
-int16_t basic_f_peek (uint8_t **);
-int16_t basic_f_abs (uint8_t **);
-int16_t basic_f_rnd (uint8_t **);
+int16_t basic_f_peekw (uint8_t **, int16_t *);      // 0xbe
+int16_t basic_f_peek (uint8_t **, int16_t *);
+int16_t basic_f_abs (uint8_t **, int16_t *);
+int16_t basic_f_rnd (uint8_t **, int16_t *);
 
-int16_t basic_f_free (uint8_t **);       // 0xc2
-int16_t basic_f_time (uint8_t **);       // 経過時間
-int16_t basic_f_year (uint8_t **);       // 年
-int16_t basic_f_month (uint8_t **);      // 月
-int16_t basic_f_day (uint8_t **);        // 日
-int16_t basic_f_hour (uint8_t **);       // 時
-int16_t basic_f_min (uint8_t **);        // 分
-int16_t basic_f_second (uint8_t **);     // 秒
-int16_t basic_f_adc (uint8_t **);        // a/d
-int16_t basic_f_temp (uint8_t **);       // 温度
-int16_t basic_f_hum (uint8_t **);        // 湿度
-int16_t basic_f_press (uint8_t **);      // 気圧
+int16_t basic_f_free (uint8_t **, int16_t *);       // 0xc2
+int16_t basic_f_time (uint8_t **, int16_t *);       // 経過時間
+int16_t basic_f_year (uint8_t **, int16_t *);       // 年
+int16_t basic_f_month (uint8_t **, int16_t *);      // 月
+int16_t basic_f_day (uint8_t **, int16_t *);        // 日
+int16_t basic_f_hour (uint8_t **, int16_t *);       // 時
+int16_t basic_f_min (uint8_t **, int16_t *);        // 分
+int16_t basic_f_second (uint8_t **, int16_t *);     // 秒
+int16_t basic_f_adc (uint8_t **, int16_t *);        // a/d
+int16_t basic_f_temp (uint8_t **, int16_t *);       // 温度
+int16_t basic_f_hum (uint8_t **, int16_t *);        // 湿度
+int16_t basic_f_press (uint8_t **, int16_t *);      // 気圧
 
 
 
@@ -189,11 +189,10 @@ LineBuffer   *LineBuffer_new (void);
 void          LineBuffer_console (LineBuffer *ln, EditorBuffer *ed);
 uint8_t      *LineBuffer_get_midbuffer (LineBuffer *ln);
 EditorBuffer *EditorBuffer_new (void);
-uint8_t      *EditorBuffer_get_textarea (EditorBuffer *ed);
 uint8_t      *EditorBuffer_search_line (EditorBuffer *ed, uint16_t linenumber, uint8_t *pos, int16_t *cdx);
 void          EditorBuffer_start_message (EditorBuffer *ed);
 
-void 		  expression_array_init (void);
-int16_t expression_array_setup (EditorBuffer *ed, uint8_t var, int16_t arraysize);
-int16_t *expression_array_search (uint8_t var, int16_t index, int16_t *e);
+void          expression_array_init (void);
+int16_t       expression_array_setup (EditorBuffer *ed, uint8_t var, int16_t arraysize);
+int16_t      *expression_array_search (uint8_t var, int16_t index, int16_t *e);
 

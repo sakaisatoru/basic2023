@@ -197,7 +197,6 @@ uint8_t token (uint8_t **text)
         case ',':       ++*text; return B_COMMA;
         case ':':       ++*text; return B_COLON;
         case ';':       ++*text; return B_SEMICOLON;
-        case '@':       ++*text; return B_ARRAY;
         case '\"':      ++*text; return B_STR;
 
         case '!':
@@ -296,15 +295,15 @@ uint8_t token (uint8_t **text)
         *text = subtext;
         subtext++;
         if (*subtext == '(') {
-			n = B_ARRAY;
-			text++;	// 配列変数の'('は中間コードとして記録しないので飛ばす
-		}
-		else if (!(*subtext >= 'A' && *subtext <= 'Z')) {
-			n = B_VAR;
-		}
-		else {
-			n = 0;
-		}
+            n = B_ARRAY;
+            text++; // 配列変数の'('は中間コードとして記録しないので飛ばす
+        }
+        else if (!(*subtext >= 'A' && *subtext <= 'Z')) {
+            n = B_VAR;
+        }
+        else {
+            n = 0;
+        }
     }
     return n;
 }
@@ -317,7 +316,7 @@ uint8_t *show_line (uint8_t *pos)
     uint8_t *s;
     uint16_t b;
     int16_t onflag = 0;
-    
+
     while (*pos != B_EOT && *pos != B_TOL){
         switch (*pos++) {
             case B_HEXNUM:
@@ -367,8 +366,8 @@ uint8_t *show_line (uint8_t *pos)
                 putchar ('(');
                 break;
 
-			case B_ON:
-				onflag = 1;
+            case B_ON:
+                onflag = 1;
             default:
                 pos--;
                 s = code2word (*pos, B_NEG,   basic_word);
@@ -376,13 +375,13 @@ uint8_t *show_line (uint8_t *pos)
                     // 見た目を整えるため特定のワードは直前に空白を挿入する
                     if (*pos == B_THEN || *pos == B_TO ||
                         *pos == B_OR || *pos == B_AND) putchar (' ');
-					if (onflag) {
-						if (*pos == B_GOTO || *pos == B_GOSUB ||
-							*pos == B_RESTORE) {
-							onflag = 0;
-							putchar (' ');
-						}
-					}
+                    if (onflag) {
+                        if (*pos == B_GOTO || *pos == B_GOSUB ||
+                            *pos == B_RESTORE) {
+                            onflag = 0;
+                            putchar (' ');
+                        }
+                    }
                     put_basic_word (s, __putch);
                     // ワードは後方に空白を挿入する
                     if (*pos >= B_OR) putchar (' ');
@@ -430,13 +429,13 @@ int16_t str2mid (uint8_t **text, uint8_t *buff, int16_t buffsize)
                 *pos++ = **text;
                 ++*text;
                 break;
-			
-			case B_ARRAY:
-				*pos++ = **text;
-                ++*text;	// '('を飛ばす
+
+            case B_ARRAY:
+                *pos++ = **text;
+                ++*text;    // '('を飛ばす
                 ++*text;
-				break;
-				
+                break;
+
             case B_NUM:
             case B_HEXNUM:
             case B_BINNUM:
