@@ -1,3 +1,25 @@
+/*
+ * basic.c
+ * 
+ * Copyright 2023 endeavor wako <endeavor2wako@gmail.com>
+ * 
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1301, USA.
+ * 
+ * 
+ */
 #ifdef HAVE_CONFIG_H
 #   include "config.h"
 #endif
@@ -225,6 +247,50 @@ static uint8_t *basic_skip_number (uint8_t *t, int16_t num, uint16_t *linenum)
 }
 
 /*
+ * 変数の書き換えを行う
+ * LET文への対応は不可
+ * t : 中間コード列
+ * n : 代入する数値
+ * e : エラーコード
+ * 
+ * 戻り値
+ * 中間コード列へのポインタを返す
+ * e にエラーコードを入れて戻す
+ */
+uint8_t *basic_write_variable (uint8_t *t, int16_t n, int16_t *e)
+{
+	int16_t n1, e0, *p;
+	uint8_t c;
+	
+	if (*t == B_VAR) {
+		t++;
+		c = (*t++ - 'A');
+		_var[c] = n;
+	}
+	else if (*t == B_ARRAY) {
+		t++;
+		c = *t++;
+		n1 = expression (&t, B_CLOSEPAR, &e0);    // 添字の処理
+		if (e0) {
+			*e = e0;
+			goto exit_this;
+		}
+
+		p = expression_array_search (c, n1, &e0);
+		if (e0) {
+			*e = e0;
+			goto exit_this;
+		}
+		*p = n;
+	}
+	else {
+		*e = B_ERR_SYNTAX_ERROR;
+	}
+exit_this:
+	return t;
+}
+
+/*
  * BASICインタープリタ本体
  * エラーコードを返す
  */
@@ -346,24 +412,8 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
 						}
 					}
 
-					if (*t == B_VAR) {
-						t++;
-						c = *t++ - 'A';
-						_var[c] = n;
-					}
-					else if (*t == B_ARRAY) {
-							t++;
-							c = *t++;
-							n1 = expression (&t, B_CLOSEPAR, &e);    // 添字の処理
-							if (e) return e;
-
-							int16_t *p = expression_array_search (c,n1,&e);
-							if (e) return e;
-							*p = n;
-					}
-					else {
-						return B_ERR_SYNTAX_ERROR;
-					}
+					t = basic_write_variable (t, n, &e);
+					if (e) return e;
 				} while (*t == B_COMMA);
                 continue;
 
@@ -434,25 +484,9 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                     ed->readnext = tmp;
 
                     t++;
-                    if (*t == B_VAR) {
-						t++;
-						c = (*t++ - 'A');
-						_var[c] = n;
-					}
-					else if (*t == B_ARRAY) {
-						t++;
-						c = *t++;
-						n1 = expression (&t, B_CLOSEPAR, &e);    // 添字の処理
-						if (e) return e;
-
-						int16_t *p = expression_array_search (c,n1,&e);
-						if (e) return e;
-						*p = n;
-					}
-					else {
-						return B_ERR_SYNTAX_ERROR;
-					}
-                } while (*t == B_COMMA);
+					t = basic_write_variable (t, n, &e);
+					if (e) return e;
+               } while (*t == B_COMMA);
                 continue;
 
             case B_NEW:
@@ -490,9 +524,9 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                     // 抜けている場合はエラー
                     return B_ERR_ILLEAGAL_FUNCTION_CALL;
                 }
+                // CONTに備えてed->currtopを保持する
                 ed->breakpoint = t;
                 ed->breakline = ed->currline;
-                //~ ed->currtop = NULL; // ダイレクトモードに遷移
                 return B_ERR_BREAK_IN;
 
             case B_CONT:
@@ -641,7 +675,7 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                 continue;
 
             case B_LET:
-                if (*t == B_VAR) {
+                if (*t == B_VAR || *t == B_ARRAY) {
                     continue;
                 }
                 return B_ERR_SYNTAX_ERROR;
