@@ -104,23 +104,6 @@ static uint8_t basic_word[] = {
 
 
 /*
- * 予約語を表示する
- */
-void __putch (uint8_t c)
-{
-    c &= 0x7f;
-    putchar (c);
-}
-
-void put_basic_word (uint8_t *s, void(*__putc)(uint8_t))
-{
-    do {
-        __putc (*s++);
-    } while ((0x80 & *s) != 0x80);
-}
-
-
-/*
  * 中間コードから予約語を得る
  */
 uint8_t *code2word (uint8_t code, uint8_t topcode, uint8_t *s)
@@ -142,59 +125,47 @@ uint8_t *code2word (uint8_t code, uint8_t topcode, uint8_t *s)
     return s;
 }
 
-int16_t get_number (uint8_t **text)
+int16_t get_number (uint8_t **text, uint8_t t)
 {
-    int16_t n;
+    int16_t n = 0;
+    switch (t) {
+		case B_HEXNUM:
+			// １６進数
+			for (;;) {
+				if (**text >= '0' && **text <= '9') {
+					n <<= 4;
+					n |= (**text - '0');
+				}
+				else if (**text >= 'A' && **text <= 'F') {
+					n <<=4;
+					n |= (**text - 'A' + 10);
+				}
+				else {
+					break;
+				}
+				++*text;
+			}
+			break;
 
-    n = 0;
-    if (**text == '0') {
-        ++*text;
-        switch (**text) {
-            case 'X':
-            case 'x':
-                // １６進数
-                for (;;) {
-                    ++*text;
-                    if (**text >= '0' && **text <= '9') {
-                        n <<= 4;
-                        n |= (**text - '0');
-                    }
-                    else if (**text >= 'A' && **text <= 'F') {
-                        n <<=4;
-                        n |= (**text - 'A' + 10);
-                    }
-                    else {
-                        break;
-                    }
-                }
-                return n;
-
-            case 'B':
-            case 'b':
-                // ２進数
-                for (;;) {
-                    ++*text;
-                    if (**text == '0' && **text == '1') {
-                        n <<= 1;
-                        n |= (**text - '0');
-                    }
-                    else {
-                        break;
-                    }
-                }
-                return n;
-
-            default:
-                break;
-        }
+		case B_BINNUM:
+			// ２進数
+			while (**text == '0' || **text == '1') {
+				n <<= 1;
+				n |= (**text - '0');
+				++*text;
+			}
+			break;
+		
+		default:
+			// １０進数
+			while (**text >= '0' && **text <= '9') {
+				n *= 10;
+				n += (**text - '0');
+				++*text;
+			}
+            break;
     }
 
-    // １０進数
-    while (**text >= '0' && **text <= '9') {
-        n *= 10;
-        n += (**text - '0');
-        ++*text;
-    }
     return n;
 }
 
@@ -273,11 +244,17 @@ uint8_t token (uint8_t **text)
     }
 
     if (**text >= '0' && **text <= '9') {
-        n = (*(*text+1) == 'X') ? B_HEXNUM :
-            (*(*text+1) == 'B') ? B_BINNUM : B_NUM;
-    }
-    else if (**text == '@') {
-        n = B_ARRAY;
+		if (**text == '0') {
+			++*text;
+			switch (**text | 0x20) {
+				case 'x':	n = B_HEXNUM;	++*text;	break;
+				case 'b':	n = B_BINNUM;	++*text;	break;
+				default:	n = B_NUM;					break;
+			}
+		}
+		else {
+			n = B_NUM;
+		}
     }
     else if (**text == '\0' || **text == '\n') {
         n = B_EOT;
@@ -339,13 +316,13 @@ uint8_t *show_line (uint8_t *pos)
     while (*pos != B_EOT && *pos != B_TOL){
         switch (*pos++) {
             case B_HEXNUM:
-                printf ("0X%X", *((uint16_t *)*pos));
+                printf ("0x%X", *((uint16_t *)pos));
                 ++pos;
                 ++pos;
                 break;
             case B_BINNUM:
-                b = *((uint16_t *)*pos);
-                printf ("0B");
+                b = *((uint16_t *)pos);
+                printf ("0b");
                 for (int i=0; i<16; i++) {
                     putchar ((b & 0x8000) ? '1':'0');
                     b <<= 1;
@@ -401,7 +378,9 @@ uint8_t *show_line (uint8_t *pos)
                             putchar (' ');
                         }
                     }
-                    put_basic_word (s, __putch);
+                    do {
+						putchar (*s++ & 0x7f);
+					} while ((0x80 & *s) != 0x80);
                     // ワードは後方に空白を挿入する
                     if (*pos >= B_OR) putchar (' ');
                     pos++;
@@ -458,7 +437,7 @@ int16_t str2mid (uint8_t **text, uint8_t *buff, int16_t buffsize)
             case B_NUM:
             case B_HEXNUM:
             case B_BINNUM:
-                d = get_number (text);
+                d = get_number (text, n);
                 *((int16_t *)pos) = d;
                 pos++;
                 pos++;

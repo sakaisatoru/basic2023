@@ -293,7 +293,7 @@ int16_t factor (uint8_t **pos)
             break;
         case B_NUM:
         case B_HEXNUM:
-        case B_BINAND:
+        case B_BINNUM:
             ++*pos;
             n = **((int16_t **)pos);
             ++*pos;

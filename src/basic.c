@@ -49,6 +49,19 @@ typedef struct {
 static STACK stack[STACKSIZE];
 static int stackpointer;
 
+void basic_putnum (int16_t n)
+{
+}
+
+void basic_putnum_hex (int16_t n)
+{
+}
+
+void basic_putnum_bin (int16_t n)
+{
+}
+
+
 void __dump (uint8_t *pos, int16_t bytes)
 {
     uint8_t *c;

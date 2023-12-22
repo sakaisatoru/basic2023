@@ -59,24 +59,6 @@ int16_t EditorBuffer_insert_and_replace (EditorBuffer *ed, LineBuffer *ln);
 */
 
 
-#if 0
-struct __LineBuffer {
-        uint8_t     inputbuffer[256];   // 入力バッファ
-        uint8_t    *pos;
-        //~ int len;
-        uint8_t     wordbuff[128];      // 中間コード格納バッファ
-        uint8_t     wordlen;
-};
-
-struct __EditorBuffer {
-        uint8_t     textarea[1024];
-        uint8_t    *eot;        // 末尾
-        uint16_t    last;       // 残り容量
-        uint8_t    *currtop;    // 実行中の行の先頭
-        uint8_t     currlen;    // 実行中の行の長さ
-        int16_t     currline;   // 実行中の行番号
-};
-#endif
 
 static LineBuffer lnbuf;
 static EditorBuffer editorbuf;
@@ -290,7 +272,7 @@ int16_t EditorBuffer_insert_and_replace (EditorBuffer *ed, LineBuffer *ln)
  */
 void EditorBuffer_show_error_message (EditorBuffer *ed, int16_t err)
 {
-    uint8_t *errmessage[] = {
+    static uint8_t *errmessage[] = {
         "No error",
         "Break",
         "Syntax error",
