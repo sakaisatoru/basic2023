@@ -219,3 +219,8 @@ void          expression_array_init (void);
 int16_t       expression_array_setup (EditorBuffer *ed, uint8_t var, int16_t arraysize);
 int16_t      *expression_array_search (uint8_t var, int16_t index, int16_t *e);
 
+void basic_putnum (int16_t n, int16_t keta);
+void basic_putnum_hex (int16_t n, int16_t keta);
+void basic_putnum_bin (int16_t n, int16_t keta);
+int16_t get_number (uint8_t **text, uint8_t t);
+

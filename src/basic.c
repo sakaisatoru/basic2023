@@ -49,16 +49,52 @@ typedef struct {
 static STACK stack[STACKSIZE];
 static int stackpointer;
 
-void basic_putnum (int16_t n)
+
+void basic_putnum (int16_t n, int16_t keta)
 {
+	uint8_t buf[10];
+	int16_t i;
+	
+	if (keta > sizeof(buf)) keta = sizeof(buf);
+	for (i=0; i < sizeof(buf); i++) {
+		buf[i] = '0' + n % 10;
+		n /= 10;
+		//~ if (n == 0) break;
+		if (--keta == 0) break;
+	}
+	for (;i >= 0;i--) {
+		putchar (buf[i]);
+	}
 }
 
-void basic_putnum_hex (int16_t n)
+void basic_putnum_hex (int16_t n, int16_t keta)
 {
+	uint8_t c;
+	int16_t i;
+
+	if (keta > 4) keta = 4;
+	//~ putchar ('0');putchar ('x');
+	for (i = 0;i < keta;i++) {
+		c = '0' + ((n & 0xf000) >> 12);	if (c > '9') c += ('A'-'9');
+		putchar (c);
+		n <<= 4;
+	}
 }
 
-void basic_putnum_bin (int16_t n)
+void basic_putnum_bin (int16_t n, int16_t keta)
 {
+	uint8_t buf[16];
+	int16_t i;
+	
+	if (keta > sizeof(buf)) keta = sizeof(buf);
+	//~ putchar ('0');putchar ('b');
+	for (i = 0;i < keta;i++) {
+		buf[i] = ('0' + (n & 0x1));
+		n >>= 1;
+	}
+	for (--i;i >=0; i--) {
+		putchar (buf[i]);
+	}
 }
 
 
@@ -309,11 +345,9 @@ exit_this:
  */
 int16_t basic (EditorBuffer *ed, LineBuffer *ln)
 {
-    uint8_t *pos, c, *jmp, *tmp, *t;
+    uint8_t *pos, c, *jmp, *tmp, *t, *print_save;
     int16_t n, n1, e, f, onflag, start, end;
     STACK *sp;
-
-    //~ static uint8_t tmpbuf[64], midtmp[32];  // INPUT用バッファ
 
     t = ln->wordbuff;
     if (ed->currtop == NULL) {
@@ -734,34 +768,80 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                 continue;
 
             case B_PRINT:
+				print_save = NULL;
                 for (;;) {
                     if (*t == B_COMMA) {
                         t++;
                         continue;
                     }
-                    else if (*t == B_SEMICOLON) {
-                            break;
-                    }
-                    else if (*t == B_COLON ||
+                    else if (*t == B_SEMICOLON ||
+							 *t == B_COLON ||
                              *t == B_TOL ||
                              *t == B_EOT) {
-                            putchar ('\n');
+							if (print_save != NULL) {
+								while (	*print_save != B_STR &&
+										*print_save != B_TOL &&
+										*print_save != B_EOT) putchar (*print_save++);
+							}
+                            if (*t != B_SEMICOLON) putchar ('\n');
                             break;
                     }
                     else if (*t == B_STR) {
                             t++;
-                            while (*t != B_EOT && *t != B_TOL) {
-                                if (*t == B_STR) {
-                                    t++;
-                                    break;
-                                }
-                                putchar (*t++);
-                            }
+                            print_save = t;
+							// 一旦文字列を読み飛ばす
+							while (*t != B_EOT && *t != B_TOL) {
+								if (*t++ == B_STR) {
+									break;
+								}
+							}
+							continue;
                     }
                     else {
                         n = expression (&t, 0, &e);
                         if (e) return e;
-                        printf ("%d",n);
+                        if (print_save != NULL) {
+							// 式の直前に文字列がある場合は書式指定の有無をチェックする
+							while (*print_save != B_EOT && *print_save != B_TOL) {
+								if (*print_save == B_STR) {
+									print_save = NULL;
+									break;
+								}
+								if (print_save[0] == '%') {
+									if (print_save[1] == '%') {
+										putchar (print_save[1]);
+										print_save++;print_save++;
+										continue;
+									}
+									print_save++;
+									int16_t keta = get_number (&print_save, 10);
+									switch (*print_save) {
+										default:
+											// format error
+											return B_ERR_ILLEAGAL_FUNCTION_CALL;
+										case 'd':
+											if (keta == 0) keta = 5;
+											basic_putnum (n, keta);
+											break;
+										case 'x':
+											if (keta == 0) keta = 4;
+											basic_putnum_hex (n, keta);
+											break;
+										case 'b':
+											if (keta == 0) keta = 8;
+											basic_putnum_bin (n, keta);
+											break;
+									}
+									print_save++;
+									break;
+								}
+								putchar (*print_save++);
+							}
+							if (*print_save == B_EOT || *print_save == B_TOL) print_save = NULL;
+						}
+						else {
+							basic_putnum (n, 5);
+						}
                     }
                 }
                 continue;

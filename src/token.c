@@ -316,23 +316,19 @@ uint8_t *show_line (uint8_t *pos)
     while (*pos != B_EOT && *pos != B_TOL){
         switch (*pos++) {
             case B_HEXNUM:
-                printf ("0x%X", *((uint16_t *)pos));
+                //~ printf ("0x%X", *((uint16_t *)pos));
+                basic_putnum_hex (*((uint16_t *)pos), 4);
                 ++pos;
                 ++pos;
                 break;
             case B_BINNUM:
-                b = *((uint16_t *)pos);
-                printf ("0b");
-                for (int i=0; i<16; i++) {
-                    putchar ((b & 0x8000) ? '1':'0');
-                    b <<= 1;
-                }
+                basic_putnum_bin (*((uint16_t *)pos), 16);
                 ++pos;
                 ++pos;
                 break;
-
             case B_NUM:
-                printf ("%d", *((uint16_t *)pos));
+                //~ printf ("%d", *((uint16_t *)pos));
+                basic_putnum (*((uint16_t *)pos), 5);
                 ++pos;
                 ++pos;
                 break;
