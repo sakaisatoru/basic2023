@@ -1,24 +1,24 @@
 /*
  * basic.h
- * 
+ *
  * Copyright 2023 endeavor wako <endeavor2wako@gmail.com>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301, USA.
- * 
- * 
+ *
+ *
  */
 #include <stdint.h>
 
@@ -144,8 +144,9 @@ enum {
     B_ERR_UNDEFINED_VARIABLE,
     B_ERR_INDEX_ERROR,
     B_ERR_DUPLICATE,
-	B_ERR_DIVIDE_BY_ZERO,
-	
+    B_ERR_DIVIDE_BY_ZERO,
+    B_ERR_FORMAT_ERROR,
+
     B_ERR_BAD_ERROR_CODE
 };
 
@@ -219,6 +220,10 @@ void          expression_array_init (void);
 int16_t       expression_array_setup (EditorBuffer *ed, uint8_t var, int16_t arraysize);
 int16_t      *expression_array_search (uint8_t var, int16_t index, int16_t *e);
 
+enum {
+    PUTNUM_SIGN = 0x100,
+    PUTNUM_ZERO = 0x200
+};
 void basic_putnum (int16_t n, int16_t keta);
 void basic_putnum_hex (int16_t n, int16_t keta);
 void basic_putnum_bin (int16_t n, int16_t keta);

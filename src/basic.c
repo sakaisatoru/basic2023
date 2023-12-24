@@ -1,24 +1,24 @@
 /*
  * basic.c
- * 
+ *
  * Copyright 2023 endeavor wako <endeavor2wako@gmail.com>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301, USA.
- * 
- * 
+ *
+ *
  */
 #ifdef HAVE_CONFIG_H
 #   include "config.h"
@@ -52,49 +52,67 @@ static int stackpointer;
 
 void basic_putnum (int16_t n, int16_t keta)
 {
-	uint8_t buf[10];
-	int16_t i;
-	
-	if (keta > sizeof(buf)) keta = sizeof(buf);
-	for (i=0; i < sizeof(buf); i++) {
-		buf[i] = '0' + n % 10;
-		n /= 10;
-		//~ if (n == 0) break;
-		if (--keta == 0) break;
-	}
-	for (;i >= 0;i--) {
-		putchar (buf[i]);
-	}
+    uint8_t buf[13];
+    int16_t i, zero, sign, minus;
+
+    zero = keta & PUTNUM_ZERO;
+    sign = keta & PUTNUM_SIGN;
+    keta = (keta & 0x00ff);
+    if (keta > sizeof(buf)-1) keta = sizeof(buf)-1;
+    minus = (n == 0)? 0 : (n < 0)? -1:1;
+    if (minus == -1) n *= -1;
+
+    i = sizeof(buf) -2;
+    do {
+        buf[i--] = '0' + n % 10;
+        keta--;
+        n /= 10;
+    } while (n != 0 && i >= 0);
+    if (zero) {
+        while (keta > 0 && i >= 0) {
+            buf[i--] = '0'; keta--;
+        }
+    }
+    if (i < 0) i = 0;
+    if (minus == -1) {
+        buf[i--] = '-';keta--;
+    } else if (sign) {
+        buf[i--] = '+';keta--;
+    }
+    while (keta > 0 && i >= 0) buf[i--] = ' ', keta--;
+    buf[sizeof(buf)-1]='\0';i++;
+    uint8_t *p = &buf[i];
+    while (*p != '\0') putchar (*p++);
 }
 
 void basic_putnum_hex (int16_t n, int16_t keta)
 {
-	uint8_t c;
-	int16_t i;
+    uint8_t c;
+    int16_t i;
 
-	if (keta > 4) keta = 4;
-	//~ putchar ('0');putchar ('x');
-	for (i = 0;i < keta;i++) {
-		c = '0' + ((n & 0xf000) >> 12);	if (c > '9') c += ('A'-'9');
-		putchar (c);
-		n <<= 4;
-	}
+    if (keta > 4) keta = 4;
+    //~ putchar ('0');putchar ('x');
+    for (i = 0;i < keta;i++) {
+        c = '0' + ((n & 0xf000) >> 12); if (c > '9') c += ('A'-'9');
+        putchar (c);
+        n <<= 4;
+    }
 }
 
 void basic_putnum_bin (int16_t n, int16_t keta)
 {
-	uint8_t buf[16];
-	int16_t i;
-	
-	if (keta > sizeof(buf)) keta = sizeof(buf);
-	//~ putchar ('0');putchar ('b');
-	for (i = 0;i < keta;i++) {
-		buf[i] = ('0' + (n & 0x1));
-		n >>= 1;
-	}
-	for (--i;i >=0; i--) {
-		putchar (buf[i]);
-	}
+    uint8_t buf[16];
+    int16_t i;
+
+    if (keta > sizeof(buf)) keta = sizeof(buf);
+    //~ putchar ('0');putchar ('b');
+    for (i = 0;i < keta;i++) {
+        buf[i] = ('0' + (n & 0x1));
+        n >>= 1;
+    }
+    for (--i;i >=0; i--) {
+        putchar (buf[i]);
+    }
 }
 
 
@@ -301,42 +319,42 @@ static uint8_t *basic_skip_number (uint8_t *t, int16_t num, uint16_t *linenum)
  * t : 中間コード列
  * n : 代入する数値
  * e : エラーコード
- * 
+ *
  * 戻り値
  * 中間コード列へのポインタを返す
  * e にエラーコードを入れて戻す
  */
 uint8_t *basic_write_variable (uint8_t *t, int16_t n, int16_t *e)
 {
-	int16_t n1, e0, *p;
-	uint8_t c;
-	
-	if (*t == B_VAR) {
-		t++;
-		c = (*t++ - 'A');
-		_var[c] = n;
-	}
-	else if (*t == B_ARRAY) {
-		t++;
-		c = *t++;
-		n1 = expression (&t, B_CLOSEPAR, &e0);    // 添字の処理
-		if (e0) {
-			*e = e0;
-			goto exit_this;
-		}
+    int16_t n1, e0, *p;
+    uint8_t c;
 
-		p = expression_array_search (c, n1, &e0);
-		if (e0) {
-			*e = e0;
-			goto exit_this;
-		}
-		*p = n;
-	}
-	else {
-		*e = B_ERR_SYNTAX_ERROR;
-	}
+    if (*t == B_VAR) {
+        t++;
+        c = (*t++ - 'A');
+        _var[c] = n;
+    }
+    else if (*t == B_ARRAY) {
+        t++;
+        c = *t++;
+        n1 = expression (&t, B_CLOSEPAR, &e0);    // 添字の処理
+        if (e0) {
+            *e = e0;
+            goto exit_this;
+        }
+
+        p = expression_array_search (c, n1, &e0);
+        if (e0) {
+            *e = e0;
+            goto exit_this;
+        }
+        *p = n;
+    }
+    else {
+        *e = B_ERR_SYNTAX_ERROR;
+    }
 exit_this:
-	return t;
+    return t;
 }
 
 /*
@@ -429,39 +447,39 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
 
             case B_INPUT:
                 if (ed->currtop == NULL) return B_ERR_ILLEAGAL_FUNCTION_CALL;
-				t--;
+                t--;
                 do {
-					t++;
-					// プロンプトの表示
-					if (*t == B_STR) {
-						t++;
-						while (*t != B_STR && *t != B_TOL && *t != B_EOT) putchar (*t++);
-						if (*t != B_STR) return B_ERR_SYNTAX_ERROR;
-						t++;
-						if (*t != B_COMMA) return B_ERR_SYNTAX_ERROR;
-						t++;
-					}
-					// 入力まち
-					for (;;) {
-						fgets (ln->inputbuffer, sizeof(ln->inputbuffer)-1,stdin);
-						tmp = ln->inputbuffer;
-						n1 = str2mid (&tmp, ln->wordbuff, sizeof(ln->wordbuff));
-						if (n1 < 0) {
-							return B_ERR_SYNTAX_ERROR;
-						}
-						tmp = ln->wordbuff;
-						n = expression (&tmp, 0, &e);
-						if (e) {
-							printf ("??INPUT\n");
-						}
-						else {
-							break;
-						}
-					}
+                    t++;
+                    // プロンプトの表示
+                    if (*t == B_STR) {
+                        t++;
+                        while (*t != B_STR && *t != B_TOL && *t != B_EOT) putchar (*t++);
+                        if (*t != B_STR) return B_ERR_SYNTAX_ERROR;
+                        t++;
+                        if (*t != B_COMMA) return B_ERR_SYNTAX_ERROR;
+                        t++;
+                    }
+                    // 入力まち
+                    for (;;) {
+                        fgets (ln->inputbuffer, sizeof(ln->inputbuffer)-1,stdin);
+                        tmp = ln->inputbuffer;
+                        n1 = str2mid (&tmp, ln->wordbuff, sizeof(ln->wordbuff));
+                        if (n1 < 0) {
+                            return B_ERR_SYNTAX_ERROR;
+                        }
+                        tmp = ln->wordbuff;
+                        n = expression (&tmp, 0, &e);
+                        if (e) {
+                            printf ("??INPUT\n");
+                        }
+                        else {
+                            break;
+                        }
+                    }
 
-					t = basic_write_variable (t, n, &e);
-					if (e) return e;
-				} while (*t == B_COMMA);
+                    t = basic_write_variable (t, n, &e);
+                    if (e) return e;
+                } while (*t == B_COMMA);
                 continue;
 
             case B_REMARK:
@@ -510,7 +528,7 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                 t--;
                 do {
                     if (ed->readnext == NULL) return B_ERR_NO_DATA;
-                    
+
                     tmp = ed->readnext;
                     n = expression (&tmp, 0, &e);
                     if (e) return e;
@@ -531,8 +549,8 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                     ed->readnext = tmp;
 
                     t++;
-					t = basic_write_variable (t, n, &e);
-					if (e) return e;
+                    t = basic_write_variable (t, n, &e);
+                    if (e) return e;
                } while (*t == B_COMMA);
                 continue;
 
@@ -768,80 +786,87 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                 continue;
 
             case B_PRINT:
-				print_save = NULL;
+                print_save = NULL;
                 for (;;) {
                     if (*t == B_COMMA) {
                         t++;
                         continue;
                     }
                     else if (*t == B_SEMICOLON ||
-							 *t == B_COLON ||
+                             *t == B_COLON ||
                              *t == B_TOL ||
                              *t == B_EOT) {
-							if (print_save != NULL) {
-								while (	*print_save != B_STR &&
-										*print_save != B_TOL &&
-										*print_save != B_EOT) putchar (*print_save++);
-							}
+                            if (print_save != NULL) {
+                                while ( *print_save != B_STR &&
+                                        *print_save != B_TOL &&
+                                        *print_save != B_EOT) putchar (*print_save++);
+                            }
                             if (*t != B_SEMICOLON) putchar ('\n');
                             break;
                     }
                     else if (*t == B_STR) {
                             t++;
                             print_save = t;
-							// 一旦文字列を読み飛ばす
-							while (*t != B_EOT && *t != B_TOL) {
-								if (*t++ == B_STR) {
-									break;
-								}
-							}
-							continue;
+                            // 一旦文字列を読み飛ばす
+                            while (*t != B_EOT && *t != B_TOL) {
+                                if (*t++ == B_STR) {
+                                    break;
+                                }
+                            }
+                            continue;
                     }
                     else {
                         n = expression (&t, 0, &e);
                         if (e) return e;
                         if (print_save != NULL) {
-							// 式の直前に文字列がある場合は書式指定の有無をチェックする
-							while (*print_save != B_EOT && *print_save != B_TOL) {
-								if (*print_save == B_STR) {
-									print_save = NULL;
-									break;
-								}
-								if (print_save[0] == '%') {
-									if (print_save[1] == '%') {
-										putchar (print_save[1]);
-										print_save++;print_save++;
-										continue;
-									}
-									print_save++;
-									int16_t keta = get_number (&print_save, 10);
-									switch (*print_save) {
-										default:
-											// format error
-											return B_ERR_ILLEAGAL_FUNCTION_CALL;
-										case 'd':
-											if (keta == 0) keta = 5;
-											basic_putnum (n, keta);
-											break;
-										case 'x':
-											if (keta == 0) keta = 4;
-											basic_putnum_hex (n, keta);
-											break;
-										case 'b':
-											if (keta == 0) keta = 8;
-											basic_putnum_bin (n, keta);
-											break;
-									}
-									print_save++;
-									break;
-								}
-								putchar (*print_save++);
-							}
-							if (*print_save == B_EOT || *print_save == B_TOL) print_save = NULL;
-						}
-						else {
-							basic_putnum (n, 5);
-						}
+                            // 式の直前に文字列がある場合は書式指定の有無をチェックする
+                            while (*print_save != B_EOT && *print_save != B_TOL) {
+                                if (*print_save == B_STR) {
+                                    print_save = NULL;
+                                    break;
+                                }
+                                if (print_save[0] == '%') {
+                                    if (print_save[1] == '%') {
+                                        putchar (print_save[1]);
+                                        print_save++;print_save++;
+                                        continue;
+                                    }
+                                    print_save++;
+                                    int16_t keta = 0;
+                                    if (*print_save == '+') {
+                                        keta |= PUTNUM_SIGN;
+                                        print_save++;
+                                    }
+                                    if (*print_save == '0') {
+                                        keta |= PUTNUM_ZERO;
+                                        print_save++;
+                                    }
+                                    keta |= get_number (&print_save, 10);
+                                    switch (*print_save) {
+                                        default:
+                                            return B_ERR_FORMAT_ERROR;
+                                        case 'd':
+                                            basic_putnum (n, keta);
+                                            break;
+                                        case 'x':
+                                            if (keta == 0) keta = 4;
+                                            basic_putnum_hex (n, keta);
+                                            break;
+                                        case 'b':
+                                            if (keta == 0) keta = 8;
+                                            basic_putnum_bin (n, keta);
+                                            break;
+                                    }
+                                    print_save++;
+                                    break;
+                                }
+                                putchar (*print_save++);
+                            }
+                            if (*print_save == B_EOT || *print_save == B_TOL) print_save = NULL;
+                        }
+                        else {
+                            basic_putnum (n, 0);
+                        }
                     }
                 }
                 continue;
