@@ -49,39 +49,48 @@ typedef struct {
 static STACK stack[STACKSIZE];
 static int stackpointer;
 
-
+/*
+ * 数値書式制御つき表示
+ * 
+ * %[符号][ゼロフィル]表示桁数
+ * 	符号 + あるいは省略
+ *  ゼロフィル 上位桁を 0 で埋める
+ *  表示桁数 
+ * 例） PRINT "%+08d", 12345  -> +0012345
+ */
 void basic_putnum (int16_t n, int16_t keta)
 {
-    uint8_t buf[13];
-    int16_t i, zero, sign, minus;
+    uint8_t buf[13], *p;
+    int16_t f = 0, zero, sign, minus;
 
     zero = keta & PUTNUM_ZERO;
     sign = keta & PUTNUM_SIGN;
     keta = (keta & 0x00ff);
-    if (keta > sizeof(buf)-1) keta = sizeof(buf)-1;
+    if (keta > 0) f = 1;
+    keta--;
+    if (keta > sizeof(buf)-2) keta = sizeof(buf)-2;
+    buf[keta+1]='\0';
     minus = (n == 0)? 0 : (n < 0)? -1:1;
     if (minus == -1) n *= -1;
 
-    i = sizeof(buf) -2;
     do {
-        buf[i--] = '0' + n % 10;
-        keta--;
+        buf[keta--] = '0' + n % 10;
         n /= 10;
-    } while (n != 0 && i >= 0);
-    if (zero) {
-        while (keta > 0 && i >= 0) {
-            buf[i--] = '0'; keta--;
+    } while (n != 0 && keta >= 0);
+    if (f && zero) {
+        while (keta >= 0) {
+            buf[keta--] = '0';
         }
+        if (minus == -1 || sign) keta++; 
     }
-    if (i < 0) i = 0;
     if (minus == -1) {
-        buf[i--] = '-';keta--;
+        buf[keta--] = '-';
     } else if (sign) {
-        buf[i--] = '+';keta--;
+        buf[keta--] = '+';
     }
-    while (keta > 0 && i >= 0) buf[i--] = ' ', keta--;
-    buf[sizeof(buf)-1]='\0';i++;
-    uint8_t *p = &buf[i];
+    while (f && keta >= 0) buf[keta--] = ' ';
+    keta++;
+    p = &buf[keta];
     while (*p != '\0') putchar (*p++);
 }
 
