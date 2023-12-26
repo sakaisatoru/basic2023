@@ -49,6 +49,28 @@ typedef struct {
 static STACK stack[STACKSIZE];
 static int stackpointer;
 
+uint8_t __putnum_sub_dec (int16_t *n)
+{
+	uint8_t c = '0' + *n % 10;
+    *n = *n / 10;
+	return c;
+}
+
+uint8_t __putnum_sub_hex (int16_t *n)
+{
+	uint8_t c = *n & 0xf;
+	c += ((c > 9)? 'A'-10:'0');
+	*n = *n >> 4;
+	return c;
+}
+
+uint8_t __putnum_sub_bin (int16_t *n)
+{
+	uint8_t c = ('0' + (*n & 0x1));
+    *n = *n >> 1;
+    return c;
+}
+
 /*
  * 数値書式制御つき表示
  * 
@@ -58,7 +80,7 @@ static int stackpointer;
  *  表示桁数 
  * 例） PRINT "%+08d", 12345  -> +0012345
  */
-void basic_putnum (int16_t n, int16_t keta)
+void basic_putnum (int16_t n, int16_t keta, uint8_t(*__putnum_sub)(int16_t *n))
 {
     uint8_t buf[13], *p;
     int16_t f = 0, zero, sign, minus;
@@ -74,8 +96,47 @@ void basic_putnum (int16_t n, int16_t keta)
     if (minus == -1) n *= -1;
 
     do {
-        buf[keta--] = '0' + n % 10;
-        n /= 10;
+        //~ buf[keta--] = '0' + n % 10;
+        //~ n /= 10;
+        buf[keta--] = __putnum_sub (&n);
+    } while (n != 0 && keta >= 0);
+    if (f && zero) {
+        while (keta >= 0) {
+            buf[keta--] = '0';
+        }
+        if (minus == -1 || sign) keta++; 
+    }
+    if (minus == -1) {
+        buf[keta--] = '-';
+    } else if (sign) {
+        buf[keta--] = '+';
+    }
+    while (f && keta >= 0) buf[keta--] = ' ';
+    keta++;
+    p = &buf[keta];
+    while (*p != '\0') putchar (*p++);
+}
+#if 0
+void basic_putnum_hex (int16_t n, int16_t keta)
+{
+    uint8_t buf[13], c, *p;
+    int16_t f = 0, zero, sign, minus;
+
+    zero = keta & PUTNUM_ZERO;
+    sign = keta & PUTNUM_SIGN;
+    keta = (keta & 0x00ff);
+    if (keta > 0) f = 1;
+    keta--;
+    if (keta > sizeof(buf)-2) keta = sizeof(buf)-2;
+    buf[keta+1]='\0';
+    minus = (n == 0)? 0 : (n < 0)? -1:1;
+    if (minus == -1) n *= -1;
+
+    do {
+		c = n & 0xf;
+		c += ((c > 9)? 'A'-10:'0');
+        buf[keta--] = c;
+        n >>= 4;
     } while (n != 0 && keta >= 0);
     if (f && zero) {
         while (keta >= 0) {
@@ -94,20 +155,6 @@ void basic_putnum (int16_t n, int16_t keta)
     while (*p != '\0') putchar (*p++);
 }
 
-void basic_putnum_hex (int16_t n, int16_t keta)
-{
-    uint8_t c;
-    int16_t i;
-
-    if (keta > 4) keta = 4;
-    //~ putchar ('0');putchar ('x');
-    for (i = 0;i < keta;i++) {
-        c = '0' + ((n & 0xf000) >> 12); if (c > '9') c += ('A'-'9');
-        putchar (c);
-        n <<= 4;
-    }
-}
-
 void basic_putnum_bin (int16_t n, int16_t keta)
 {
     uint8_t buf[16];
@@ -123,7 +170,7 @@ void basic_putnum_bin (int16_t n, int16_t keta)
         putchar (buf[i]);
     }
 }
-
+#endif
 
 void __dump (uint8_t *pos, int16_t bytes)
 {
@@ -855,15 +902,15 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                                         default:
                                             return B_ERR_FORMAT_ERROR;
                                         case 'd':
-                                            basic_putnum (n, keta);
+                                            basic_putnum (n, keta, __putnum_sub_dec);
                                             break;
                                         case 'x':
                                             if (keta == 0) keta = 4;
-                                            basic_putnum_hex (n, keta);
+                                            basic_putnum (n, keta, __putnum_sub_hex);
                                             break;
                                         case 'b':
                                             if (keta == 0) keta = 8;
-                                            basic_putnum_bin (n, keta);
+                                            basic_putnum (n, keta, __putnum_sub_bin);
                                             break;
                                     }
                                     print_save++;
@@ -874,7 +921,7 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                             if (*print_save == B_EOT || *print_save == B_TOL) print_save = NULL;
                         }
                         else {
-                            basic_putnum (n, 0);
+                            basic_putnum (n, 0, __putnum_sub_dec);
                         }
                     }
                 }

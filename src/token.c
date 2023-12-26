@@ -317,18 +317,19 @@ uint8_t *show_line (uint8_t *pos)
         switch (*pos++) {
             case B_HEXNUM:
                 //~ printf ("0x%X", *((uint16_t *)pos));
-                basic_putnum_hex (*((uint16_t *)pos), 4);
+                basic_putnum (*((uint16_t *)pos), 0, __putnum_sub_hex);
                 ++pos;
                 ++pos;
                 break;
             case B_BINNUM:
-                basic_putnum_bin (*((uint16_t *)pos), 16);
+                basic_putnum (*((uint16_t *)pos), 0, __putnum_sub_bin);
                 ++pos;
                 ++pos;
                 break;
             case B_NUM:
                 //~ printf ("%d", *((uint16_t *)pos));
-                basic_putnum (*((uint16_t *)pos), 5);
+                //~ basic_putnum (*((uint16_t *)pos), 5);
+                basic_putnum (*((uint16_t *)pos), 0, __putnum_sub_dec);
                 ++pos;
                 ++pos;
                 break;
