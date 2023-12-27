@@ -82,7 +82,7 @@ uint8_t __putnum_sub_bin (int16_t *n)
  */
 void basic_putnum (int16_t n, int16_t keta, uint8_t(*__putnum_sub)(int16_t *n))
 {
-    uint8_t buf[13], *p;
+    uint8_t buf[18], *p;
     int16_t f = 0, zero, sign, minus;
 
     zero = keta & PUTNUM_ZERO;
@@ -96,8 +96,6 @@ void basic_putnum (int16_t n, int16_t keta, uint8_t(*__putnum_sub)(int16_t *n))
     if (minus == -1) n *= -1;
 
     do {
-        //~ buf[keta--] = '0' + n % 10;
-        //~ n /= 10;
         buf[keta--] = __putnum_sub (&n);
     } while (n != 0 && keta >= 0);
     if (f && zero) {
@@ -116,61 +114,7 @@ void basic_putnum (int16_t n, int16_t keta, uint8_t(*__putnum_sub)(int16_t *n))
     p = &buf[keta];
     while (*p != '\0') putchar (*p++);
 }
-#if 0
-void basic_putnum_hex (int16_t n, int16_t keta)
-{
-    uint8_t buf[13], c, *p;
-    int16_t f = 0, zero, sign, minus;
 
-    zero = keta & PUTNUM_ZERO;
-    sign = keta & PUTNUM_SIGN;
-    keta = (keta & 0x00ff);
-    if (keta > 0) f = 1;
-    keta--;
-    if (keta > sizeof(buf)-2) keta = sizeof(buf)-2;
-    buf[keta+1]='\0';
-    minus = (n == 0)? 0 : (n < 0)? -1:1;
-    if (minus == -1) n *= -1;
-
-    do {
-		c = n & 0xf;
-		c += ((c > 9)? 'A'-10:'0');
-        buf[keta--] = c;
-        n >>= 4;
-    } while (n != 0 && keta >= 0);
-    if (f && zero) {
-        while (keta >= 0) {
-            buf[keta--] = '0';
-        }
-        if (minus == -1 || sign) keta++; 
-    }
-    if (minus == -1) {
-        buf[keta--] = '-';
-    } else if (sign) {
-        buf[keta--] = '+';
-    }
-    while (f && keta >= 0) buf[keta--] = ' ';
-    keta++;
-    p = &buf[keta];
-    while (*p != '\0') putchar (*p++);
-}
-
-void basic_putnum_bin (int16_t n, int16_t keta)
-{
-    uint8_t buf[16];
-    int16_t i;
-
-    if (keta > sizeof(buf)) keta = sizeof(buf);
-    //~ putchar ('0');putchar ('b');
-    for (i = 0;i < keta;i++) {
-        buf[i] = ('0' + (n & 0x1));
-        n >>= 1;
-    }
-    for (--i;i >=0; i--) {
-        putchar (buf[i]);
-    }
-}
-#endif
 
 void __dump (uint8_t *pos, int16_t bytes)
 {
@@ -876,8 +820,9 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                         if (e) return e;
                         if (print_save != NULL) {
                             // 式の直前に文字列がある場合は書式指定の有無をチェックする
-                            while (*print_save != B_EOT && *print_save != B_TOL) {
-                                if (*print_save == B_STR) {
+                            uint8_t(*__putnum_sub_)(int16_t *n) = NULL;
+                            for (;;) {
+                                if (*print_save == B_STR || *print_save == B_EOT || *print_save == B_TOL) {
                                     print_save = NULL;
                                     break;
                                 }
@@ -888,7 +833,7 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                                         continue;
                                     }
                                     print_save++;
-                                    int16_t keta = 0;
+									int16_t keta = 0;
                                     if (*print_save == '+') {
                                         keta |= PUTNUM_SIGN;
                                         print_save++;
@@ -902,23 +847,22 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                                         default:
                                             return B_ERR_FORMAT_ERROR;
                                         case 'd':
-                                            basic_putnum (n, keta, __putnum_sub_dec);
+                                            __putnum_sub_ = __putnum_sub_dec;
                                             break;
                                         case 'x':
-                                            if (keta == 0) keta = 4;
-                                            basic_putnum (n, keta, __putnum_sub_hex);
+                                            __putnum_sub_ = __putnum_sub_hex;
                                             break;
                                         case 'b':
-                                            if (keta == 0) keta = 8;
-                                            basic_putnum (n, keta, __putnum_sub_bin);
+											__putnum_sub_ = __putnum_sub_bin;
                                             break;
                                     }
+                                    basic_putnum (n, keta, __putnum_sub_);
                                     print_save++;
                                     break;
                                 }
                                 putchar (*print_save++);
                             }
-                            if (*print_save == B_EOT || *print_save == B_TOL) print_save = NULL;
+                            if (__putnum_sub_ == NULL) basic_putnum (n, 0, __putnum_sub_dec);
                         }
                         else {
                             basic_putnum (n, 0, __putnum_sub_dec);
