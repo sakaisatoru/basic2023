@@ -65,9 +65,10 @@ static EditorBuffer editorbuf;
 
 void EditorBuffer_start_message (EditorBuffer *ed)
 {
-    puts (  PACKAGE_STRING"\n"
-            "by endeavor_wako since 2023");
-    printf ("%d bytes free.\n", ed->last);
+    basic_puts ( PACKAGE_STRING"\n"
+				 "by endeavor_wako since 2023\n");
+    basic_putnum (ed->last, 0, __putnum_sub_dec);
+    basic_puts (" bytes free.\n");
 }
 
 LineBuffer *LineBuffer_new (void)
@@ -107,7 +108,7 @@ void LineBuffer_console (LineBuffer *ln, EditorBuffer *ed)
 
     expression_array_init ();
     for (;;) {
-        printf ("OK\n");
+        basic_puts ("OK\n");
         fgets (ln->inputbuffer, sizeof(ln->inputbuffer)-1, stdin);
         ln->pos = strchr (ln->inputbuffer, '\n');
         if (ln->pos != NULL) *(ln->pos) = '\0';
@@ -294,19 +295,20 @@ void EditorBuffer_show_error_message (EditorBuffer *ed, int16_t err)
     };
 
     if (err <= B_ERR_NO_ERROR || err >= B_ERR_BAD_ERROR_CODE) {
-        printf ("%s", errmessage[B_ERR_BAD_ERROR_CODE]);
+        basic_puts (errmessage[B_ERR_BAD_ERROR_CODE]);
     }
     else {
-        printf ("%s", errmessage[err]);
+        basic_puts (errmessage[err]);
     }
     if (ed->currline != 0) {
-        printf (" in %d\n", ed->currline);
+        basic_puts (" in ");
+        basic_putnum (ed->currline, 0, __putnum_sub_dec);
+        basic_puts ("\n");
     }
     else {
-        printf (".\n");
+        basic_puts (".\n");
     }
     if (ed->breakpoint == NULL && ed->currpos != NULL) {
         show_line (ed->currpos);
     }
-
 }

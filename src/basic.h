@@ -230,3 +230,5 @@ uint8_t __putnum_sub_hex (int16_t *n);
 uint8_t __putnum_sub_bin (int16_t *n);
 int16_t get_number (uint8_t **text, uint8_t t);
 
+void basic_puts (uint8_t *);
+

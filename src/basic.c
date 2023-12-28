@@ -49,6 +49,12 @@ typedef struct {
 static STACK stack[STACKSIZE];
 static int stackpointer;
 
+void basic_puts (uint8_t *pos)
+{
+	while (*pos != '\0') putchar (*pos++);
+}
+
+
 uint8_t __putnum_sub_dec (int16_t *n)
 {
 	uint8_t c = '0' + *n % 10;
@@ -83,30 +89,30 @@ uint8_t __putnum_sub_bin (int16_t *n)
 void basic_putnum (int16_t n, int16_t keta, uint8_t(*__putnum_sub)(int16_t *n))
 {
     uint8_t buf[18], *p;
-    int16_t f = 0, zero, sign, minus;
+    int16_t f = 0, ctrl, minus;
 
-    zero = keta & PUTNUM_ZERO;
-    sign = keta & PUTNUM_SIGN;
+    ctrl = (keta & 0xff00);
     keta = (keta & 0x00ff);
     if (keta > 0) f = 1;
     keta--;
     if (keta > sizeof(buf)-2) keta = sizeof(buf)-2;
     buf[keta+1]='\0';
+    if (n == (int16_t)32768) n = 0;
     minus = (n == 0)? 0 : (n < 0)? -1:1;
     if (minus == -1) n *= -1;
 
     do {
         buf[keta--] = __putnum_sub (&n);
     } while (n != 0 && keta >= 0);
-    if (f && zero) {
+    if (f && (ctrl & PUTNUM_ZERO)) {
         while (keta >= 0) {
             buf[keta--] = '0';
         }
-        if (minus == -1 || sign) keta++; 
+        if (minus == -1 || (ctrl & PUTNUM_SIGN)) keta++; 
     }
     if (minus == -1) {
         buf[keta--] = '-';
-    } else if (sign) {
+    } else if (ctrl & PUTNUM_SIGN) {
         buf[keta--] = '+';
     }
     while (f && keta >= 0) buf[keta--] = ' ';
@@ -121,13 +127,16 @@ void __dump (uint8_t *pos, int16_t bytes)
     uint8_t *c;
 
     c = pos;
-    printf (" address  +0 +1 +2 +3 +4 +5 +6 +7 +8 +9 +A +B +C +D +E +F\n");
-    //~ for (int i = 0; i < bytes; i++) {
+    basic_puts (" address  +0 +1 +2 +3 +4 +5 +6 +7 +8 +9 +A +B +C +D +E +F\n");
     for (int i = 0; i < bytes; i++) {
-        if (i % 16 == 0) printf ("%X: ", pos);
-        printf ("%02X ", *pos++);
+        if (i % 16 == 0) {
+			basic_putnum (pos, 0, __putnum_sub_hex);
+			basic_puts (": ");
+		}
+        basic_putnum (*pos++, 2|PUTNUM_ZERO, __putnum_sub_hex);
+        putchar (' ');
         if (i % 16 == 15) {
-            printf ("  ");
+            basic_puts ("  ");
             for (int j = 0; j < 16; j++) {
                 putchar ((*c >= 0x20 && *c <= 0x7f)? *c:'.');
                 c++;
@@ -470,7 +479,7 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                         tmp = ln->wordbuff;
                         n = expression (&tmp, 0, &e);
                         if (e) {
-                            printf ("??INPUT\n");
+                            basic_puts ("??INPUT\n");
                         }
                         else {
                             break;
@@ -899,14 +908,16 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                         ++pos;
                         start = *((uint16_t *)pos);
                         if (start > end) break;
-                        printf ("%d ", start);
+                        //~ printf ("%d ", start);
+                        basic_putnum (start, 0, __putnum_sub_dec);
+                        putchar (' ');
                         ++pos;++pos;
                         ++pos;
                         continue;
                     }
                     pos = show_line (pos);
                     if (!(++n & 7)) {
-                        printf ("-- press enter key ---");getchar ();
+                        basic_puts ("-- press enter key ---");getchar ();
                     }
                 }
                 continue;
