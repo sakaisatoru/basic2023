@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdarg.h>
 #include "basic.h"
 
 
@@ -49,41 +50,95 @@ typedef struct {
 static STACK stack[STACKSIZE];
 static int stackpointer;
 
+void basic_printf (uint8_t *fmt, ...)
+{
+    va_list ap;
+    int16_t keta = 0, n;
+    uint8_t(*__putnum_sub_)(int16_t *n) = NULL;
+
+    va_start (ap, fmt);
+
+    if (fmt != NULL) {
+        while (*fmt != '\0') {
+            if (*fmt == '%') {
+                fmt++;
+                if (*fmt == '%') {
+                    putchar (*fmt++);
+                    continue;
+                }
+                if (*fmt == '+') {
+                    keta |= PUTNUM_SIGN;
+                    fmt++;
+                }
+                if (*fmt == '0') {
+                    keta |= PUTNUM_ZERO;
+                    fmt++;
+                }
+                keta |= get_number (&fmt,10);
+
+                switch (*fmt) {
+                    default:
+                        fmt++;
+                        continue;
+                    case 'd':
+                        __putnum_sub_ = __putnum_sub_dec;
+                        break;
+                    case 'x':
+                        __putnum_sub_ = __putnum_sub_hex;
+                        break;
+                    case 'b':
+                        __putnum_sub_ = __putnum_sub_bin;
+                        break;
+                }
+                n = (int16_t)va_arg (ap, int);
+                basic_putnum (n, keta, __putnum_sub_);
+                fmt++;
+            }
+            else {
+                putchar (*fmt++);
+            }
+        }
+    }
+exit_this:
+    va_end (ap);
+}
+
+
 void basic_puts (uint8_t *pos)
 {
-	while (*pos != '\0') putchar (*pos++);
+    while (*pos != '\0') putchar (*pos++);
 }
 
 
 uint8_t __putnum_sub_dec (int16_t *n)
 {
-	uint8_t c = '0' + *n % 10;
+    uint8_t c = '0' + *n % 10;
     *n = *n / 10;
-	return c;
+    return c;
 }
 
 uint8_t __putnum_sub_hex (int16_t *n)
 {
-	uint8_t c = *n & 0xf;
-	c += ((c > 9)? 'A'-10:'0');
-	*n = *n >> 4;
-	return c;
+    uint8_t c = *n & 0xf;
+    c += ((c > 9)? 'A'-10:'0');
+    *n = *n >> 4;
+    return c;
 }
 
 uint8_t __putnum_sub_bin (int16_t *n)
 {
-	uint8_t c = ('0' + (*n & 0x1));
+    uint8_t c = ('0' + (*n & 0x1));
     *n = *n >> 1;
     return c;
 }
 
 /*
  * 数値書式制御つき表示
- * 
+ *
  * %[符号][ゼロフィル]表示桁数
- * 	符号 + あるいは省略
+ *  符号 + あるいは省略
  *  ゼロフィル 上位桁を 0 で埋める
- *  表示桁数 
+ *  表示桁数
  * 例） PRINT "%+08d", 12345  -> +0012345
  */
 void basic_putnum (int16_t n, int16_t keta, uint8_t(*__putnum_sub)(int16_t *n))
@@ -108,7 +163,7 @@ void basic_putnum (int16_t n, int16_t keta, uint8_t(*__putnum_sub)(int16_t *n))
         while (keta >= 0) {
             buf[keta--] = '0';
         }
-        if (minus == -1 || (ctrl & PUTNUM_SIGN)) keta++; 
+        if (minus == -1 || (ctrl & PUTNUM_SIGN)) keta++;
     }
     if (minus == -1) {
         buf[keta--] = '-';
@@ -130,11 +185,9 @@ void __dump (uint8_t *pos, int16_t bytes)
     basic_puts (" address  +0 +1 +2 +3 +4 +5 +6 +7 +8 +9 +A +B +C +D +E +F\n");
     for (int i = 0; i < bytes; i++) {
         if (i % 16 == 0) {
-			basic_putnum (pos, 0, __putnum_sub_hex);
-			basic_puts (": ");
-		}
-        basic_putnum (*pos++, 2|PUTNUM_ZERO, __putnum_sub_hex);
-        putchar (' ');
+            basic_printf ("%x: ", pos);
+        }
+        basic_printf ("%02x ", *pos++);
         if (i % 16 == 15) {
             basic_puts ("  ");
             for (int j = 0; j < 16; j++) {
@@ -246,42 +299,30 @@ int16_t basic_save_intelhex (EditorBuffer *ed)
 
     while (len > 0) {
         fprintf (fp, ":");
-        //~ printf (":");
         if (len < 16) {
             // 最終データレコード
             sum = len + (ad >> 8) + ad & 0xff;
             fprintf (fp, "%02X%04X00", len, ad);
-            //~ printf ("%02X%04X00", len, ad);
-            //~ printf ("%02X %04X 00 ", len, ad);
             while (len-- > 0) {
                 sum += *pos;
                 fprintf (fp, "%02X", *pos++);
-                //~ printf ("%02X", *pos++);
-                //~ printf ("%02X ", *pos++);
             }
             fprintf (fp, "%02X\n", 0xff & (0-sum));
-            //~ printf ("%02X\n", 0xff & (0-sum));
             break;
         }
         else {
             sum = 16 + ad >> 8 + ad & 0xff;
             fprintf (fp, "10%04X00", ad);
-            //~ printf ("10%04X00", ad);
-            //~ printf ("10 %04X 00 ", ad);
             for (i = 0; i < 16; i++) {
                 sum += *pos;
                 fprintf (fp, "%02X", *pos++);
-                //~ printf ("%02X", *pos++);
-                //~ printf ("%02X ", *pos++);
             }
             fprintf (fp, "%02X\n", 0xff & (0-sum));
-            //~ printf ("%02X\n", 0xff & (0-sum));
             len -= 16;
             ad += 16;
         }
     }
     fprintf (fp, ":00000001FF\n");
-    //~ printf (":00000001FF\n");
 
     fclose (fp);
     return B_ERR_NO_ERROR;
@@ -842,7 +883,7 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                                         continue;
                                     }
                                     print_save++;
-									int16_t keta = 0;
+                                    int16_t keta = 0;
                                     if (*print_save == '+') {
                                         keta |= PUTNUM_SIGN;
                                         print_save++;
@@ -862,7 +903,7 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                                             __putnum_sub_ = __putnum_sub_hex;
                                             break;
                                         case 'b':
-											__putnum_sub_ = __putnum_sub_bin;
+                                            __putnum_sub_ = __putnum_sub_bin;
                                             break;
                                     }
                                     basic_putnum (n, keta, __putnum_sub_);
@@ -908,9 +949,9 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                         ++pos;
                         start = *((uint16_t *)pos);
                         if (start > end) break;
-                        //~ printf ("%d ", start);
-                        basic_putnum (start, 0, __putnum_sub_dec);
-                        putchar (' ');
+                        basic_printf ("%d ", start);
+                        //~ basic_putnum (start, 0, __putnum_sub_dec);
+                        //~ putchar (' ');
                         ++pos;++pos;
                         ++pos;
                         continue;

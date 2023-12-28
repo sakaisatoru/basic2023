@@ -1,24 +1,24 @@
 /*
  * token.c
- * 
+ *
  * Copyright 2023 endeavor wako <endeavor2wako@gmail.com>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301, USA.
- * 
- * 
+ *
+ *
  */
 #ifdef HAVE_CONFIG_H
 #   include "config.h"
@@ -129,40 +129,40 @@ int16_t get_number (uint8_t **text, uint8_t t)
 {
     int16_t n = 0;
     switch (t) {
-		case B_HEXNUM:
-			// １６進数
-			for (;;) {
-				if (**text >= '0' && **text <= '9') {
-					n <<= 4;
-					n |= (**text - '0');
-				}
-				else if (**text >= 'A' && **text <= 'F') {
-					n <<=4;
-					n |= (**text - 'A' + 10);
-				}
-				else {
-					break;
-				}
-				++*text;
-			}
-			break;
+        case B_HEXNUM:
+            // １６進数
+            for (;;) {
+                if (**text >= '0' && **text <= '9') {
+                    n <<= 4;
+                    n |= (**text - '0');
+                }
+                else if (**text >= 'A' && **text <= 'F') {
+                    n <<=4;
+                    n |= (**text - 'A' + 10);
+                }
+                else {
+                    break;
+                }
+                ++*text;
+            }
+            break;
 
-		case B_BINNUM:
-			// ２進数
-			while (**text == '0' || **text == '1') {
-				n <<= 1;
-				n |= (**text - '0');
-				++*text;
-			}
-			break;
-		
-		default:
-			// １０進数
-			while (**text >= '0' && **text <= '9') {
-				n *= 10;
-				n += (**text - '0');
-				++*text;
-			}
+        case B_BINNUM:
+            // ２進数
+            while (**text == '0' || **text == '1') {
+                n <<= 1;
+                n |= (**text - '0');
+                ++*text;
+            }
+            break;
+
+        default:
+            // １０進数
+            while (**text >= '0' && **text <= '9') {
+                n *= 10;
+                n += (**text - '0');
+                ++*text;
+            }
             break;
     }
 
@@ -244,17 +244,17 @@ uint8_t token (uint8_t **text)
     }
 
     if (**text >= '0' && **text <= '9') {
-		if (**text == '0') {
-			++*text;
-			switch (**text | 0x20) {
-				case 'x':	n = B_HEXNUM;	++*text;	break;
-				case 'b':	n = B_BINNUM;	++*text;	break;
-				default:	n = B_NUM;					break;
-			}
-		}
-		else {
-			n = B_NUM;
-		}
+        if (**text == '0') {
+            ++*text;
+            switch (**text | 0x20) {
+                case 'x':   n = B_HEXNUM;   ++*text;    break;
+                case 'b':   n = B_BINNUM;   ++*text;    break;
+                default:    n = B_NUM;                  break;
+            }
+        }
+        else {
+            n = B_NUM;
+        }
     }
     else if (**text == '\0' || **text == '\n') {
         n = B_EOT;
@@ -316,19 +316,22 @@ uint8_t *show_line (uint8_t *pos)
     while (*pos != B_EOT && *pos != B_TOL){
         switch (*pos++) {
             case B_HEXNUM:
-                basic_puts ("0x");
-                basic_putnum (*((uint16_t *)pos), 0, __putnum_sub_hex);
+                //~ basic_puts ("0x");
+                //~ basic_putnum (*((uint16_t *)pos), 0, __putnum_sub_hex);
+                basic_printf ("0x%x", *((uint16_t *)pos));
                 ++pos;
                 ++pos;
                 break;
             case B_BINNUM:
-                basic_puts ("0b");
-                basic_putnum (*((uint16_t *)pos), 0, __putnum_sub_bin);
+                //~ basic_puts ("0b");
+                //~ basic_putnum (*((uint16_t *)pos), 0, __putnum_sub_bin);
+                basic_printf ("0b%b", *((uint16_t *)pos));
                 ++pos;
                 ++pos;
                 break;
             case B_NUM:
-                basic_putnum (*((uint16_t *)pos), 0, __putnum_sub_dec);
+                basic_printf ("%d", *((uint16_t *)pos));
+                //~ basic_putnum (*((uint16_t *)pos), 0, __putnum_sub_dec);
                 ++pos;
                 ++pos;
                 break;
@@ -375,8 +378,8 @@ uint8_t *show_line (uint8_t *pos)
                         }
                     }
                     do {
-						putchar (*s++ & 0x7f);
-					} while ((0x80 & *s) != 0x80);
+                        putchar (*s++ & 0x7f);
+                    } while ((0x80 & *s) != 0x80);
                     // ワードは後方に空白を挿入する
                     if (*pos >= B_OR) putchar (' ');
                     pos++;

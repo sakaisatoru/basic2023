@@ -65,10 +65,11 @@ static EditorBuffer editorbuf;
 
 void EditorBuffer_start_message (EditorBuffer *ed)
 {
-    basic_puts ( PACKAGE_STRING"\n"
-				 "by endeavor_wako since 2023\n");
-    basic_putnum (ed->last, 0, __putnum_sub_dec);
-    basic_puts (" bytes free.\n");
+    basic_printf ( PACKAGE_STRING"\n"
+                   "by endeavor_wako since 2023\n"
+                   "%d bytes free.\n", ed->last);
+    //~ basic_putnum (ed->last, 0, __putnum_sub_dec);
+    //~ basic_puts (" bytes free.\n");
 }
 
 LineBuffer *LineBuffer_new (void)
@@ -244,8 +245,6 @@ int16_t EditorBuffer_insert_and_replace (EditorBuffer *ed, LineBuffer *ln)
     if (rv == 0) {
         // 置換
         // 既存行を削除する
-        //~ printf ("debug : delete line\n");
-        //~ l = *(dest + 3);
         l = (uint16_t)dest[3];
         source = dest + l;
         len = (uint16_t)(ed->eot - source);
@@ -255,7 +254,6 @@ int16_t EditorBuffer_insert_and_replace (EditorBuffer *ed, LineBuffer *ln)
     }
 
     // 挿入
-    //~ printf ("debug : insert %X <- %X len:%d\n", dest + ln->wordlen +1, dest, (ed->eot - dest + 1));
     memmove (dest + ln->wordlen +1, dest, (ed->eot - dest + 1));
     ed->eot += (ln->wordlen +1);
     dest[0] = B_TOL;
@@ -301,9 +299,7 @@ void EditorBuffer_show_error_message (EditorBuffer *ed, int16_t err)
         basic_puts (errmessage[err]);
     }
     if (ed->currline != 0) {
-        basic_puts (" in ");
-        basic_putnum (ed->currline, 0, __putnum_sub_dec);
-        basic_puts ("\n");
+        basic_printf (" in %d\n", ed->currline);
     }
     else {
         basic_puts (".\n");
