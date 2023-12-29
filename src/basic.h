@@ -159,7 +159,7 @@ struct __LineBuffer {
 };
 
 struct __EditorBuffer {
-        uint8_t     textarea[1024];
+        uint8_t     textarea[1024*16];
         uint8_t    *eot;        // 末尾
         uint16_t    last;       // 残り容量
         uint8_t    *currtop;    // 実行中の行の先頭

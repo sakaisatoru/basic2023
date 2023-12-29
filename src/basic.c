@@ -478,6 +478,9 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
 
             case B_LOAD:
                 if (ed->currtop != NULL) return B_ERR_ILLEAGAL_FUNCTION_CALL;
+				EditorBuffer_new ();    // init の代用
+                stackpointer = -1;
+                expression_array_init ();
                 e = basic_load_intelhex (ed);
                 if (e) return e;
                 continue;
