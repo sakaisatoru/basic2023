@@ -80,6 +80,11 @@ void basic_printf (uint8_t *fmt, ...)
                     default:
                         fmt++;
                         continue;
+                    case 'c':
+                        n = (int16_t)va_arg (ap, int);
+                        putchar ((int8_t)(n & 0xff));
+                        fmt++;
+                        continue;
                     case 'd':
                         __putnum_sub_ = __putnum_sub_dec;
                         break;
@@ -266,11 +271,6 @@ exit_this:
     return t;
 }
 
-static EditorBuffer *inter_ed;
-int16_t _basic_free_area (void)
-{
-    return (int16_t)inter_ed->last;
-}
 
 int16_t basic_load_intelhex (EditorBuffer *ed)
 {
@@ -428,8 +428,6 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
         stackpointer = -1;  // 要検討
         onflag      = 0;    // ON n GOTO,GOSUB,RESTORE用(n値,flag兼用)
     }
-
-    inter_ed = ed;  // 外部からの参照用
 
     //~ __dump (t, 64);
     while (*t != B_EOT) {
@@ -612,7 +610,8 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                 return B_ERR_NO_ERROR;
 
             case B_END:
-                ed->currtop = NULL;
+                ed->currtop = ed->currpos = NULL;
+                ed->currline = 0;
                 return B_ERR_NO_ERROR;
 
             case B_RUN:
@@ -884,6 +883,12 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                                     if (*print_save == '0') {
                                         keta |= PUTNUM_ZERO;
                                         print_save++;
+                                    }
+                                    if (*print_save == 'c') {
+                                        __putnum_sub_ = __putnum_sub_dec;
+                                        putchar ((int8_t)(n & 0xff));
+                                        print_save++;
+                                        break;
                                     }
                                     keta |= get_number (&print_save, 10);
                                     switch (*print_save) {

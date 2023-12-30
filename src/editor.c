@@ -107,6 +107,7 @@ void LineBuffer_console (LineBuffer *ln, EditorBuffer *ed)
     uint8_t *text;
     int16_t err, len, mode;
 
+    expression_init (ed);
     expression_array_init ();
     for (;;) {
         basic_puts ("OK\n");

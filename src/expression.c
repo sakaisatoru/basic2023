@@ -53,7 +53,10 @@ int16_t (*_basic_func[])(uint8_t **t, int16_t *e) = {
 };
 
 int16_t _var[26];
+
+static EditorBuffer *inter_ed;
 static int16_t _b_err;
+
 #define CHECK_ERROR if(_b_err)return n
 
 int16_t basic_f_reserved (uint8_t **pos, int16_t *e)
@@ -78,7 +81,7 @@ int16_t basic_f_free (uint8_t **pos, int16_t *e)
 
     n = expression (pos, B_CLOSEPAR, &e0);
 
-    m = _basic_free_area ();
+    m = (int16_t)inter_ed->last;
     if (n == 1) {
         // 確保できる配列の要素数を返す
         m -= 5;
@@ -126,6 +129,12 @@ int16_t basic_f_rnd (uint8_t **pos, int16_t *e)
 static uint8_t *array_top;  // 配列変数格納域先頭
 static uint8_t *array_next; // 配列変数次回格納域先頭
 
+void expression_init (EditorBuffer *ed)
+{
+    // 関数からインタープリタ側の状況にアクセスするための初期化処理
+    inter_ed = ed;
+}
+
 void expression_array_init (void)
 {
     array_top = NULL;
@@ -144,31 +153,22 @@ int16_t expression_array_clear (EditorBuffer *ed)
 
 int16_t expression_array_setup (EditorBuffer *ed, uint8_t var, int16_t arraysize)
 {
-    int16_t i;
+    int16_t i, e;
     uint8_t *tmp;
 
     if (array_top == NULL) {
         array_top = ed->eot;
         array_top++;    // ソースコードの直後に配置する
         array_next = array_top;
+        *array_next = '\0';
         ed->last--;     // 末尾の'\0'分を減じる
+    }
+    if (expression_array_search (var, 0, &e) != NULL) {
+        return B_ERR_DUPLICATE;
     }
     // ヘッダ 4
     if (ed->last < (arraysize * sizeof(int16_t) + 4)) return B_ERR_OUT_OF_MEMORY;
 
-    tmp = array_top;
-    while (*tmp == B_ARRAY) {
-        if (tmp[1] == var) {
-            return B_ERR_DUPLICATE;
-        }
-        tmp++;
-        tmp++;
-        i = *((int16_t*)tmp);
-        tmp++;tmp++;
-        tmp += i*sizeof(int16_t);
-    }
-
-    array_next = tmp;
     *array_next++ = B_ARRAY;
     *array_next++ = var;
     *((int16_t*)array_next) = arraysize;

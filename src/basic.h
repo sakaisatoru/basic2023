@@ -216,6 +216,7 @@ EditorBuffer *EditorBuffer_new (void);
 uint8_t      *EditorBuffer_search_line (EditorBuffer *ed, uint16_t linenumber, uint8_t *pos, int16_t *cdx);
 void          EditorBuffer_start_message (EditorBuffer *ed);
 
+void          expression_init (EditorBuffer *ed);
 void          expression_array_init (void);
 int16_t       expression_array_clear (EditorBuffer *ed);
 int16_t       expression_array_setup (EditorBuffer *ed, uint8_t var, int16_t arraysize);
