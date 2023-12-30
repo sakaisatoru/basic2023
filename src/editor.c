@@ -125,6 +125,7 @@ void LineBuffer_console (LineBuffer *ln, EditorBuffer *ed)
         }
         else {
             if (ln->wordbuff[0] == B_NUM) {
+                expression_array_clear (ed);// 定義済の配列は全て消去される
                 if (ln->wordbuff[3] == B_EOT) {
                     // 行削除
                     text = &ln->wordbuff[1];

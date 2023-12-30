@@ -413,8 +413,8 @@ exit_this:
  */
 int16_t basic (EditorBuffer *ed, LineBuffer *ln)
 {
-    uint8_t *pos, c, *jmp, *tmp, *t, *print_save;
-    int16_t n, n1, e, f, onflag, start, end;
+    uint8_t *pos, c, *jmp, *tmp, *t;
+    int16_t n, n1, e, f, onflag;
     STACK *sp;
 
     t = ln->wordbuff;
@@ -461,13 +461,7 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                         memset (_var, 0, sizeof(_var));
                     case 2:
                         // 配列変数を消去する
-                        //~ printf ("%p  %p\n", ed->eot, &ed->textarea[sizeof(ed->textarea)-1]);
-                        if (ed->eot < &ed->textarea[sizeof(ed->textarea)-1]) {
-                            tmp = ed->eot;
-                            tmp++;
-                            *tmp = '\0';
-                            ed->last = (uint16_t)(&(ed->textarea[sizeof(ed->textarea)-1]) - ed->eot);
-                        }
+                        expression_array_clear (ed);
                         break;
                     case 1:
                         // 単純変数のみ初期化する
@@ -478,7 +472,7 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
 
             case B_LOAD:
                 if (ed->currtop != NULL) return B_ERR_ILLEAGAL_FUNCTION_CALL;
-				EditorBuffer_new ();    // init の代用
+                EditorBuffer_new ();    // init の代用
                 stackpointer = -1;
                 expression_array_init ();
                 e = basic_load_intelhex (ed);
@@ -831,7 +825,6 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                     if (e) return e;
                     *p = n1;
                 }
-
                 continue;
 
             case B_COLON:
@@ -839,8 +832,7 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                 continue;
 
             case B_PRINT:
-                print_save = NULL;
-                for (;;) {
+                for (uint8_t *print_save = NULL;;) {
                     if (*t == B_COMMA) {
                         t++;
                         continue;
@@ -862,9 +854,7 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                             print_save = t;
                             // 一旦文字列を読み飛ばす
                             while (*t != B_EOT && *t != B_TOL) {
-                                if (*t++ == B_STR) {
-                                    break;
-                                }
+                                if (*t++ == B_STR) break;
                             }
                             continue;
                     }
@@ -925,43 +915,45 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                 continue;
 
             case B_LIST:
-                start = 0;
-                end = 32767;
-                if (*t == B_NUM) {
-                    t++;
-                    start = *((int16_t*)t);
-                    t++;
-                    t++;
-                    if (*t != B_COMMA) {
-                        end = start;
-                    }
-                }
-                if (*t == B_COMMA) {
-                    t++;
+                {
+                    int16_t curr = 0, end = 32767, listflag = 0;
                     if (*t == B_NUM) {
                         t++;
-                        end = *((int16_t*)t);
+                        curr = *((int16_t*)t);
                         t++;
                         t++;
+                        if (*t != B_COMMA) {
+                            end = curr;
+                        }
                     }
-                }
-                pos = EditorBuffer_search_line (ed, start, NULL, &f);
-                n = 0;
-                while (*pos != B_EOT) {
-                    if (*pos == B_TOL) {
-                        ++pos;
-                        start = *((uint16_t *)pos);
-                        if (start > end) break;
-                        basic_printf ("%d ", start);
-                        //~ basic_putnum (start, 0, __putnum_sub_dec);
-                        //~ putchar (' ');
-                        ++pos;++pos;
-                        ++pos;
-                        continue;
+                    if (*t == B_COMMA) {
+                        t++;
+                        if (*t == B_NUM) {
+                            t++;
+                            end = *((int16_t*)t);
+                            t++;
+                            t++;
+                        }
+                        else {
+                            listflag = 1;
+                        }
                     }
-                    pos = show_line (pos);
-                    if (!(++n & 7)) {
-                        basic_puts ("-- press enter key ---");getchar ();
+                    pos = EditorBuffer_search_line (ed, curr, NULL, &f);
+                    n = 0;
+                    while (*pos != B_EOT) {
+                        if (*pos == B_TOL) {
+                            ++pos;
+                            curr = *((uint16_t *)pos);
+                            if (curr > end) break;
+                            basic_printf ("%d ", curr);
+                            ++pos;++pos;
+                            ++pos;
+                            continue;
+                        }
+                        pos = show_line (pos);
+                        if (listflag && !(++n & 7)) {
+                            basic_puts ("-- press enter key ---");getchar ();
+                        }
                     }
                 }
                 continue;

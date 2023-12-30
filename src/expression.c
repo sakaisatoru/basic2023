@@ -1,24 +1,24 @@
 /*
  * expression.c
- * 
+ *
  * Copyright 2023 endeavor wako <endeavor2wako@gmail.com>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301, USA.
- * 
- * 
+ *
+ *
  */
 #ifdef HAVE_CONFIG_H
 #   include "config.h"
@@ -102,13 +102,13 @@ int16_t basic_f_rnd (uint8_t **pos, int16_t *e)
             ((_rnd_reg & 0x0020) >> 5);
     _rnd_reg = (_rnd_reg >> 1) | (bit << 15);
 
-	if (n == 0) {
-		e0 = B_ERR_DIVIDE_BY_ZERO;
-		n = 0;
-	}
-	else {
-		n = (int16_t)(_rnd_reg % n);
-	}
+    if (n == 0) {
+        e0 = B_ERR_DIVIDE_BY_ZERO;
+        n = 0;
+    }
+    else {
+        n = (int16_t)(_rnd_reg % n);
+    }
     *e = e0;
     return n;
 }
@@ -130,6 +130,16 @@ void expression_array_init (void)
 {
     array_top = NULL;
     array_next = NULL;
+}
+
+int16_t expression_array_clear (EditorBuffer *ed)
+{
+    //~ printf ("%p  %p\n", ed->eot, &ed->textarea[sizeof(ed->textarea)-1]);
+    if (ed->eot < &ed->textarea[sizeof(ed->textarea)-1]) {
+        ed->eot[1] = '\0';
+        ed->last = (uint16_t)(&(ed->textarea[sizeof(ed->textarea)-1]) - ed->eot);
+    }
+    expression_array_init ();
 }
 
 int16_t expression_array_setup (EditorBuffer *ed, uint8_t var, int16_t arraysize)
@@ -322,19 +332,19 @@ int16_t term6 (uint8_t **pos)
                 n *= n1;
                 break;
             case B_DIV:
-				if (n1 == 0) {
-					_b_err = B_ERR_DIVIDE_BY_ZERO;
-				}
-				else {
-					n /= n1;
+                if (n1 == 0) {
+                    _b_err = B_ERR_DIVIDE_BY_ZERO;
+                }
+                else {
+                    n /= n1;
                 }
                 break;
             case B_MOD:
-				if (n1 == 0) {
-					_b_err = B_ERR_DIVIDE_BY_ZERO;
-				}
-				else {
-					n %= n1;
+                if (n1 == 0) {
+                    _b_err = B_ERR_DIVIDE_BY_ZERO;
+                }
+                else {
+                    n %= n1;
                 }
                 break;
             default:

@@ -381,7 +381,7 @@ uint8_t *show_line (uint8_t *pos)
                         putchar (*s++ & 0x7f);
                     } while ((0x80 & *s) != 0x80);
                     // ワードは後方に空白を挿入する
-                    if (*pos >= B_OR) putchar (' ');
+                    if (*pos >= B_OR && *pos < B_F_PEEKW) putchar (' ');
                     pos++;
                     break;
                 }
