@@ -99,8 +99,9 @@ enum {
     B_F_PEEK,
     B_F_ABS,
     B_F_RND,
-
-    B_F_FREE,       // 0xc2
+	B_F_SGN,
+	
+    B_F_FREE,       // 0xc3
     B_F_TIME,       // 経過時間
     B_F_YEAR,       // 年
     B_F_MONTH,      // 月
@@ -115,11 +116,10 @@ enum {
 
     B_NUM,          // 内部コード 数値
     B_HEXNUM,       // 内部コード 16進
-    B_BINNUM,       // 内部コード 2進     0xd0
+    B_BINNUM,       // 内部コード 2進     0xd1
     B_VAR,          // 内部コード 変数
 
-                    //0xd2
-    B_EOT,          // end of text
+    B_EOT,          // end of text		0xd3
     B_TOL,          // top of line
 };
 
@@ -178,6 +178,7 @@ int16_t basic_f_peekw (uint8_t **, int16_t *);      // 0xbe
 int16_t basic_f_peek (uint8_t **, int16_t *);
 int16_t basic_f_abs (uint8_t **, int16_t *);
 int16_t basic_f_rnd (uint8_t **, int16_t *);
+int16_t basic_f_sgn (uint8_t **, int16_t *);
 
 int16_t basic_f_free (uint8_t **, int16_t *);       // 0xc2
 int16_t basic_f_time (uint8_t **, int16_t *);       // 経過時間

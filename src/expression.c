@@ -36,8 +36,9 @@ int16_t (*_basic_func[])(uint8_t **t, int16_t *e) = {
  basic_f_reserved, // basic_f_peek ,
  basic_f_abs ,
  basic_f_rnd ,
+ basic_f_sgn ,
 
- basic_f_free ,       // 0xc2
+ basic_f_free ,       // 0xc3
  basic_f_reserved, // basic_f_time ,       // 経過時間
  basic_f_reserved, // basic_f_year ,       // 年
  basic_f_reserved, // basic_f_month ,      // 月
@@ -69,10 +70,19 @@ int16_t basic_f_abs (uint8_t **pos, int16_t *e)
 {
     int16_t n, e0;
     n = expression (pos, B_CLOSEPAR, &e0);
-    if (n < 0) n *= -1;
     *e = e0;
-    return n;
+    return (n < 0) ? n * -1 : n;
 }
+
+int16_t basic_f_sgn (uint8_t **pos, int16_t *e)
+{
+    int16_t n, e0;
+    n = expression (pos, B_CLOSEPAR, &e0);
+    *e = e0;
+    return 	(n == 0) ? 0 :
+			(n < 0) ? -1 : 1;
+}
+
 
 extern int16_t _basic_free_area (void);
 int16_t basic_f_free (uint8_t **pos, int16_t *e)
