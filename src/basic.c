@@ -42,7 +42,8 @@ enum {
 };
 typedef struct {
             uint8_t type;       // スタックを使っている構文
-            uint8_t var;        // 変数（添字）
+            //~ uint8_t var;        // 変数（添字）
+            int16_t *var_p;     // 変数（格納先）
             int16_t value;      // FOR のカウンター終了値
             uint8_t *address;   // 分岐先アドレス
         } STACK;
@@ -219,12 +220,12 @@ STACK *stack_tos (void)
     return (stackpointer < 0) ? NULL : &stack[stackpointer];
 }
 
-STACK *stack_push (uint8_t type, uint8_t var, int16_t value, uint8_t *address)
+STACK *stack_push (uint8_t type, int16_t *var, int16_t value, uint8_t *address)
 {
     stackpointer++;
     if (stackpointer >= STACKSIZE) return NULL;
     stack[stackpointer].type    = type;
-    stack[stackpointer].var     = var;
+    stack[stackpointer].var_p   = var;
     stack[stackpointer].value   = value;
     stack[stackpointer].address = address;
     return &stack[stackpointer];
@@ -464,8 +465,8 @@ exit_this:
  */
 int16_t basic (EditorBuffer *ed, LineBuffer *ln)
 {
-    uint8_t *pos, c, *jmp, *tmp, *t;
-    int16_t n, n1, e, f, onflag;
+    uint8_t *pos, c, *jmp, *tmp, *t, *t_save;
+    int16_t n, n1, e, f, onflag, *var_p;
     STACK *sp;
 
     t = ln->wordbuff;
@@ -750,7 +751,7 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                     //~ __dump (t, 64);
                     return B_ERR_UNDEFINED_LINE;
                 }
-                stack_push (STACK_TYPE_GOSUB, 0, 0, t);
+                stack_push (STACK_TYPE_GOSUB, NULL, 0, t);
                 t = jmp;
                 continue;
 
@@ -779,35 +780,24 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                 continue;
 
             case B_NEXT:
-                if (stack_check ()) {
-                    return B_ERR_NEXT_WITHOUT_FOR;
-                }
+                if (stack_check ()) return B_ERR_NEXT_WITHOUT_FOR;
                 sp = stack_tos ();
-                if (sp->type != STACK_TYPE_FOR) {
-                    return B_ERR_NEXT_WITHOUT_FOR;
-                }
-                if (_var[sp->var] >= sp->value) {
+                if (sp->type != STACK_TYPE_FOR) return B_ERR_NEXT_WITHOUT_FOR;
+                if (*(sp->var_p) >= sp->value) {
                     stack_pop ();
                 }
                 else {
-                    _var[sp->var]++;
+                    ++*(sp->var_p);
                     t = sp->address;
                 }
                 continue;
 
             case B_FOR:
-                if (stack_check () > 0) {
-                    return B_ERR_STACK_OVER_FLOW;
-                }
-                if (*t != B_VAR) {
-                    return B_ERR_SYNTAX_ERROR;
-                }
-                t++;
-                if (!isalpha(*t)) {
-                    return B_ERR_SYNTAX_ERROR;
-                }
-                c = (*t-'A');
-                t++;
+                if (stack_check () > 0) return B_ERR_STACK_OVER_FLOW;
+                if (*t != B_VAR && *t != B_ARRAY) return B_ERR_SYNTAX_ERROR;
+				var_p = basic_search_variable_address (&t, &e);
+                if (var_p == NULL)      return e;
+                //~ t++;
                 if (*t == B_EQ2) {
                     t++;
                     n = expression (&t, B_TO, &e);
@@ -818,8 +808,8 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                 }
                 n1 = expression (&t, 0, &e);
                 if (e) return e;
-                stack_push (STACK_TYPE_FOR, c, n1, t);
-                _var[c] = n;
+                stack_push (STACK_TYPE_FOR, var_p, n1, t);
+                *var_p = n;
                 continue;
 
             case B_EOT:
@@ -856,58 +846,22 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
 
             case B_VAR:
 			case B_ARRAY:
-				{
-					t--;
-					int16_t *var_p = basic_search_variable_address (&t, &e);
-					if (var_p == NULL) {basic_puts ("null");return e;}
-					if (*t == B_EQ2) {
-						t++;
-						n = expression (&t, 0, &e);
-						if (e) {basic_puts ("expression");return e;}
-						*var_p = n;
-						continue;
-					}
-					t--; t--;
-					n = expression (&t, 0, &e); // 単行演算子の処理
-					if (e) {basic_puts ("++,--");return e;}
+				t--;
+				t_save = t;
+				var_p = basic_search_variable_address (&t, &e);
+				if (var_p == NULL) return e;
+				if (*t == B_EQ2) {
+					t++;
+					n = expression (&t, 0, &e);
+					if (e) return e;
+					*var_p = n;
+					continue;
 				}
+				t = t_save;
+				n = expression (&t, 0, &e); // 単行演算子の処理
+				if (e) return e;
 				continue;
-#if 0
-                // LET省略
-                if (!isalpha(*t)) {
-                    return B_ERR_SYNTAX_ERROR;
-                }
-                c = (*t-'A');
-                t++;
-                if (*t == B_EQ2) {
-                    t++;
-                    n = expression (&t, 0, &e);
-                    if (e) return e;
-                    _var[c] = n;
-                    continue;
-                }
-                t--;
-                t--;
-                n = expression (&t, 0, &e); // 単行演算子の処理
-                if (e) return e;
-#endif
-                continue;
-#if 0
-            case B_ARRAY:
-                c = *t++;
-                n = expression (&t, B_CLOSEPAR, &e);    // 添字の処理
-                if (e) return e;
 
-                if (*t == B_EQ2) {
-                    t++;
-                    n1 = expression (&t, 0, &e);
-                    if (e) return e;
-                    int16_t *p = expression_array_search (c,n,&e);
-                    if (e) return e;
-                    *p = n1;
-                }
-                continue;
-#endif
             case B_COLON:
             case B_SEMICOLON:
                 continue;
