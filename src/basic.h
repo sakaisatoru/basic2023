@@ -92,6 +92,7 @@ enum {
     B_RUN,
     B_SAVE,
     B_STOP,
+    B_SWAP,
     B_THEN,
     B_TO,
 

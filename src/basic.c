@@ -364,6 +364,47 @@ static uint8_t *basic_skip_number (uint8_t *t, int16_t num, uint16_t *linenum)
 }
 
 /*
+ * 変数の格納位置をポインタで返す
+ */
+int16_t *basic_search_variable_address (uint8_t **t, int16_t *e)
+{
+	//~ uint8_t *t = t0;
+	int16_t *r = NULL;
+
+    int16_t n1, e0, *p;
+    uint8_t c;
+
+	
+    if (**t == B_VAR) {
+        ++*t;
+        c = **t - 'A';
+        ++*t;
+        r = &_var[c];
+    }
+    else if (**t == B_ARRAY) {
+        ++*t;
+        c = **t; ++*t;
+        n1 = expression (t, B_CLOSEPAR, &e0);    // 添字の処理
+        if (e0) {
+            *e = e0;
+            goto exit_this;
+        }
+
+        r = expression_array_search (c, n1, &e0);
+        if (e0) {
+            *e = e0;
+            goto exit_this;
+        }
+    }
+    else {
+        *e = B_ERR_SYNTAX_ERROR;
+    }
+exit_this:
+	return r;
+}
+
+
+/*
  * 変数の書き換えを行う
  * LET文への対応は不可
  * t : 中間コード列
@@ -379,6 +420,15 @@ uint8_t *basic_write_variable (uint8_t *t, int16_t n, int16_t *e)
     int16_t n1, e0, *p;
     uint8_t c;
 
+	p = basic_search_variable_address (&t, &e0);
+	if (p == NULL) {
+		*e = e0;
+	}
+	else {
+		*p = n;
+	}
+	return t;
+#if 0
     if (*t == B_VAR) {
         t++;
         c = (*t++ - 'A');
@@ -405,6 +455,7 @@ uint8_t *basic_write_variable (uint8_t *t, int16_t n, int16_t *e)
     }
 exit_this:
     return t;
+#endif
 }
 
 /*
@@ -439,6 +490,18 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
             default:
                 return B_ERR_SYNTAX_ERROR;
 
+            case B_SWAP:
+				{
+					int16_t *left = basic_search_variable_address (&t, &e);
+					if (left == NULL) return e;
+					if (*t != B_COMMA) return B_ERR_SYNTAX_ERROR;
+					t++;
+					int16_t *right = basic_search_variable_address (&t, &e);
+					if (right == NULL) return e;
+					n = *left; *left = *right; *right = n;
+				}
+				continue;
+				
             case B_DIM:
                 if (t[0] == B_ARRAY) {
                     c = t[1];   // 変数名
@@ -792,6 +855,24 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                 return B_ERR_SYNTAX_ERROR;
 
             case B_VAR:
+			case B_ARRAY:
+				{
+					t--;
+					int16_t *var_p = basic_search_variable_address (&t, &e);
+					if (var_p == NULL) {basic_puts ("null");return e;}
+					if (*t == B_EQ2) {
+						t++;
+						n = expression (&t, 0, &e);
+						if (e) {basic_puts ("expression");return e;}
+						*var_p = n;
+						continue;
+					}
+					t--; t--;
+					n = expression (&t, 0, &e); // 単行演算子の処理
+					if (e) {basic_puts ("++,--");return e;}
+				}
+				continue;
+#if 0
                 // LET省略
                 if (!isalpha(*t)) {
                     return B_ERR_SYNTAX_ERROR;
@@ -809,8 +890,9 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                 t--;
                 n = expression (&t, 0, &e); // 単行演算子の処理
                 if (e) return e;
+#endif
                 continue;
-
+#if 0
             case B_ARRAY:
                 c = *t++;
                 n = expression (&t, B_CLOSEPAR, &e);    // 添字の処理
@@ -825,7 +907,7 @@ int16_t basic (EditorBuffer *ed, LineBuffer *ln)
                     *p = n1;
                 }
                 continue;
-
+#endif
             case B_COLON:
             case B_SEMICOLON:
                 continue;
